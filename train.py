@@ -132,7 +132,7 @@ def test_on_cats_and_blueprints():
 def train_segmentation(args):
     model = Unet(layers=[8, 16, 32, 64, 128], output_channels=11)
 
-    model.load_state_dict(torch.load(Path() / 'learned_models' / args.load, map_location=device))
+    model.load_state_dict(torch.load(Path() / 'learned_models' / args.load, map_location=args.device))
     # transfer_knowledge(model, Path() / 'learned_models' / args.transfer, device=args.device)
 
     dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised()
