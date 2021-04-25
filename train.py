@@ -20,7 +20,7 @@ def transfer_knowledge(model, knowledge_path, device=device):
 
 
 def train_as_segmantation(model, data_loader, mode='train', num_epochs=5, lr=1e-4, dice=None, focal=False,
-                          test_loader=None):
+                          test_loader=None, device=device):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
 
