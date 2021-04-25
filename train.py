@@ -19,7 +19,8 @@ def transfer_knowledge(model, knowledge_path, device=device):
     model.load_state_dict(state_dict, strict=False)
 
 
-def train_as_segmantation(model, data_loader, mode='train', num_epochs=5, lr=1e-4, dice=None, focal=False, device=device):
+def train_as_segmantation(model, data_loader, mode='train', num_epochs=5, lr=1e-4, dice=None, focal=False,
+                          device=device):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
 
@@ -84,9 +85,9 @@ def test_on_cats_and_blueprints():
     from pathlib import Path
     import torch.nn as nn
 
-    model = Unet(layers=[16, 32, 64, 128], output_channels=3)
-    transfer_knowledge(model, Path() / 'learned_models' / 'unet_16_autoencoder.pt')
-    dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_unsupervised(dpi=25)
+    model = Unet(layers=[8, 16, 32, 64, 128], output_channels=1)
+    transfer_knowledge(model, Path() / 'learned_models' / 'autoencoder_noise_0.1_sgd.pt')
+    dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_unsupervised(dpi=50)
 
     criterion = nn.MSELoss()
 
@@ -102,12 +103,12 @@ def test_on_cats_and_blueprints():
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=[30, 20])
     a = ax1.imshow(img.squeeze())
-    ax2.imshow(img_decoded.cpu().detach().numpy().squeeze()[0, :])
+    ax2.imshow(img_decoded.cpu().detach().numpy().squeeze())
 
-    img_decoded = img_decoded.cpu().detach().numpy().squeeze()
-    img_decoded = img_decoded.transpose(1, 2, 0)  # np.swapaxes(img_decoded, 0, 2)
-    img_decoded = np.uint8((img_decoded + np.min(img_decoded)) / (np.max(img_decoded) + np.min(img_decoded)) * 255)
-    Image.fromarray(img_decoded, 'RGB').show()
+    # img_decoded = img_decoded.cpu().detach().numpy().squeeze()
+    # img_decoded = img_decoded.transpose(1, 2, 0)  # np.swapaxes(img_decoded, 0, 2)
+    # img_decoded = np.uint8((img_decoded + np.min(img_decoded)) / (np.max(img_decoded) + np.min(img_decoded)) * 255)
+    # Image.fromarray(img_decoded, 'RGB').show()
 
     # fig.colorbar(a, ax=fig)
     fig.suptitle(f'Shape: {img.shape} Loss: {loss}', fontsize=30)
@@ -117,23 +118,28 @@ def test_on_cats_and_blueprints():
 
 def train_segmentation(args):
     model = Unet(layers=[8, 16, 32, 64, 128], output_channels=11)
-    transfer_knowledge(model, Path() / 'learned_models' / args.transfer)
+    transfer_knowledge(model, Path() / 'learned_models' / args.transfer, device=args.device)
 
     dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised()
 
     losses = train_as_segmantation(model, dataloader_train, device=args.device, num_epochs=args.epochs, lr=args.lr)
 
-    if args.save is not None:
-        np.savetxt(Path() / "saved" / args.save, losses)
+    # if args.save is not None:
+    np.savetxt(Path() / "logs" / f'{args.save}.out', losses)
+    torch.save(model.state_dict(), Path() / 'learned_models' / f'{args.save}.pt')
 
+
+# if __name__ == '__main__':
+#     test_on_cats_and_blueprints()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cuda')
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--lr', type=float, default=1e-3)
-    parser.add_argument('--save', type=str, default=None)
+    parser.add_argument('--save', type=str, default="save")
     parser.add_argument('--transfer', type=str, default="logged.pt")
+    parser.add_argument('--resize', type=int, default=None)
 
     args = parser.parse_args()
 
