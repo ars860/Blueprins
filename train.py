@@ -20,7 +20,7 @@ def transfer_knowledge(model, knowledge_path, device=device):
 
 
 def train_as_segmantation(model, data_loader, mode='train', num_epochs=5, lr=1e-4, dice=None, focal=False,
-                          device=device):
+                          test_loader=None):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
 
@@ -47,9 +47,13 @@ def train_as_segmantation(model, data_loader, mode='train', num_epochs=5, lr=1e-
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)  # torch.optim.SGD(model.parameters(), lr=lr)
     # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
 
+    # length = len(dataloader)
+
     outputs = []
+    # test_outputs = []
     for epoch in range(num_epochs):
-        losses = []
+        losses = np.zeros(len(data_loader))
+        # losses_test = np.zeros(len(test_loader))
 
         for i, (img, mask) in enumerate(data_loader):
             img, mask = img.to(device), mask.to(device)
@@ -65,15 +69,24 @@ def train_as_segmantation(model, data_loader, mode='train', num_epochs=5, lr=1e-
                 loss.backward()
                 optimizer.step()
 
-            losses.append(loss.item())
+            losses[i] = loss.item()
             if i % 10 == 0 or i == len(data_loader) - 1:
                 print('Epoch:{}/{}, Step:{}/{}, Loss:{:.6f}'.format(epoch + 1, num_epochs, i, len(data_loader),
-                                                                    float(loss)))
+                                                                    np.true_divide(losses.sum(), (losses != 0).sum())))
+
+        # if test_loader is not None:
+        # with torch.no_grad():
+        # for i, (img, mask) in enumerate(test_loader):
+        # losses_test[i] = criterion(model(img), mask)
         # if mode == 'train':
         # scheduler.step()
 
-        losses = np.array(losses)
-        outputs.append(np.mean(losses))
+        # losses = losses
+
+        # if test_loader is None:
+        outputs.append([np.mean(losses), np.median(losses)])
+        # else:
+        # losses_test = np.zeros(len(test_loader))
 
     return np.vstack(outputs)
 
