@@ -9,11 +9,11 @@ from train import device
 from unet import Unet
 
 
-def train_as_autoencoder(model, data_loader, num_epochs=5, mode=None):
+def train_as_autoencoder(model, data_loader, num_epochs=5, mode=None, device=device):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
 
-    model.to(device)
+    model = model.to(device)
     if mode == 'train':
         model.train()
     else:
@@ -30,8 +30,7 @@ def train_as_autoencoder(model, data_loader, num_epochs=5, mode=None):
             else:
                 augmented = img
 
-            augmented.to(device)
-            img.to(device)
+            augmented, img = augmented.to(device), img.to(device)
 
             optimizer.zero_grad()
 
@@ -54,7 +53,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cuda')
 
+    args = parser.parse_args()
+
+    device = args.device
+
     model = Unet(layers=[8, 16, 32, 64, 128], output_channels=1)
     dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_unsupervised(dpi=50, workers=2,
                                                                                                   augmentations=AddGaussianNoise())
-    train_as_autoencoder(model, dataloader_train, mode='train', num_epochs=1)
+    train_as_autoencoder(model, dataloader_train, mode='train', num_epochs=1, device=device)

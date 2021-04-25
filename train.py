@@ -1,31 +1,15 @@
+import argparse
 from pathlib import Path
 
+import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
-import numpy as np
-
 from dataset import get_dataloaders_unsupervised, get_dataloaders_supervised
+from losses import focal_loss, dice_loss
 from unet import Unet
 
 device = 'cuda'
-
-
-def dice_loss(pred, target, smooth=1., ignored_channels=None):
-    if ignored_channels is None:
-        ignored_channels = []
-
-    channels = [channel for channel in range(pred.shape[1]) if channel not in ignored_channels]  # list(set(range()) - set(ignored_channels))
-
-    pred = pred[:, channels].contiguous()
-    target = target[:, channels].contiguous()
-
-    intersection = (pred * target).sum(dim=2).sum(dim=2)
-
-    loss = (1 - ((2. * intersection + smooth) / (pred.sum(dim=2).sum(dim=2) + target.sum(dim=2).sum(dim=2) + smooth)))
-
-    return loss.mean()
 
 
 def transfer_knowledge(model, knowledge_path, device=device):
@@ -35,7 +19,7 @@ def transfer_knowledge(model, knowledge_path, device=device):
     model.load_state_dict(state_dict, strict=False)
 
 
-def train_as_segmantation(model, data_loader, mode='train', num_epochs=5, lr=1e-4, dice=None, focal=False):
+def train_as_segmantation(model, data_loader, mode='train', num_epochs=5, lr=1e-4, dice=None, focal=False, device=device):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
 
@@ -88,7 +72,7 @@ def train_as_segmantation(model, data_loader, mode='train', num_epochs=5, lr=1e-
         # scheduler.step()
 
         losses = np.array(losses)
-        outputs.append([np.mean(losses), np.median(losses)])
+        outputs.append(np.mean(losses))
 
     return np.vstack(outputs)
 
@@ -131,14 +115,24 @@ def test_on_cats_and_blueprints():
     # train_as_autoencoder(model, dataloader_train)
 
 
-def train_segmentation():
+def train_segmentation(args):
     model = Unet(layers=[8, 16, 32, 64, 128], output_channels=11)
     # transfer_knowledge(model, Path() / 'learned_models' / 'unet_16_autoencoder.pt')
 
     dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised()
 
-    train_as_segmantation(model, dataloader_train)
+    losses = train_as_segmantation(model, dataloader_train, device=args.device, num_epochs=args.epochs, lr=args.lr)
+
+    np.savetxt(Path() / "saved" / args.save, losses)
 
 
 if __name__ == '__main__':
-    train_segmentation()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--device', type=str, default='cuda')
+    parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--save', type=str, default='saved')
+
+    args = parser.parse_args()
+
+    train_segmentation(args)
