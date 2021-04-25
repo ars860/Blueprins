@@ -117,13 +117,14 @@ def test_on_cats_and_blueprints():
 
 def train_segmentation(args):
     model = Unet(layers=[8, 16, 32, 64, 128], output_channels=11)
-    # transfer_knowledge(model, Path() / 'learned_models' / 'unet_16_autoencoder.pt')
+    transfer_knowledge(model, Path() / 'learned_models' / args.transfer)
 
     dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised()
 
     losses = train_as_segmantation(model, dataloader_train, device=args.device, num_epochs=args.epochs, lr=args.lr)
 
-    np.savetxt(Path() / "saved" / args.save, losses)
+    if args.save is not None:
+        np.savetxt(Path() / "saved" / args.save, losses)
 
 
 if __name__ == '__main__':
@@ -131,7 +132,8 @@ if __name__ == '__main__':
     parser.add_argument('--device', type=str, default='cuda')
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--lr', type=float, default=1e-3)
-    parser.add_argument('--save', type=str, default='saved')
+    parser.add_argument('--save', type=str, default=None)
+    parser.add_argument('--transfer', type=str, default="logged.pt")
 
     args = parser.parse_args()
 
