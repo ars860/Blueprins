@@ -9,7 +9,7 @@ import numpy as np
 from dataset import get_dataloaders_unsupervised, get_dataloaders_supervised
 from unet import Unet
 
-device = 'cpu'
+device = 'cuda'
 
 
 def dice_loss(pred, target, smooth=1., ignored_channels=None):
@@ -35,7 +35,7 @@ def transfer_knowledge(model, knowledge_path, device=device):
     model.load_state_dict(state_dict, strict=False)
 
 
-def train_as_segmantation(model, data_loader, mode='train', num_epochs=5, lr=1e-4):
+def train_as_segmantation(model, data_loader, mode='train', num_epochs=5, lr=1e-4, dice=None, focal=False):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
 
@@ -45,12 +45,27 @@ def train_as_segmantation(model, data_loader, mode='train', num_epochs=5, lr=1e-
     else:
         model.eval()
 
-    criterion = dice_loss  # nn.BCEWithLogitsLoss()  # F.binary_cross_entropy_with_logits
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)  # torch.optim.SGD(model.parameters(), lr=lr)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
+    def criterion(x, mask):
+        x = torch.sigmoid(x)
+        result = F.binary_cross_entropy(x, mask.float())
 
-    # outputs = []
+        if focal:
+            result = focal_loss(result, mask)
+
+        if dice is not None and "weight" in dice:
+            channels = dice['channels'] if 'channels' in dice else None
+            result += dice["weight"] * dice_loss(x, mask, channels=channels)
+
+        return result
+
+    # criterion = dice_loss  # nn.BCEWithLogitsLoss()  # F.binary_cross_entropy_with_logits
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)  # torch.optim.SGD(model.parameters(), lr=lr)
+    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
+
+    outputs = []
     for epoch in range(num_epochs):
+        losses = []
+
         for i, (img, mask) in enumerate(data_loader):
             img, mask = img.to(device), mask.to(device)
             optimizer.zero_grad()
@@ -58,22 +73,24 @@ def train_as_segmantation(model, data_loader, mode='train', num_epochs=5, lr=1e-
             # img[img == 0] = 1e-7
             # img = 1 - img
             x = model(img)
-            x = torch.sigmoid(x)
-            loss = F.binary_cross_entropy(x, mask.float()) + dice_loss(x, mask)
+            # x = torch.sigmoid(x)
+            loss = criterion(x, mask)  # F.binary_cross_entropy(x, mask.float()) + criterion(x, mask)
 
             if mode == 'train':
                 loss.backward()
                 optimizer.step()
 
+            losses.append(loss.item())
             if i % 10 == 0 or i == len(data_loader) - 1:
-                print('Epoch:{}/{}, Step:{}/{}, Loss:{:.4f}'.format(epoch + 1, num_epochs, i, len(data_loader),
+                print('Epoch:{}/{}, Step:{}/{}, Loss:{:.6f}'.format(epoch + 1, num_epochs, i, len(data_loader),
                                                                     float(loss)))
-        if mode == 'train':
-            scheduler.step()
+        # if mode == 'train':
+        # scheduler.step()
 
-        # outputs.append((epoch, img, mask, x))
+        losses = np.array(losses)
+        outputs.append([np.mean(losses), np.median(losses)])
 
-    # return outputs
+    return np.vstack(outputs)
 
 
 def test_on_cats_and_blueprints():
