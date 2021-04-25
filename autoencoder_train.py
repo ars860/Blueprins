@@ -1,3 +1,5 @@
+import argparse
+
 import torch.nn as nn
 import torch
 
@@ -49,6 +51,9 @@ def train_as_autoencoder(model, data_loader, num_epochs=5, mode=None):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--device', type=str, default='cuda')
+
     model = Unet(layers=[8, 16, 32, 64, 128], output_channels=1)
     dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_unsupervised(dpi=50, workers=2,
                                                                                                   augmentations=AddGaussianNoise())
