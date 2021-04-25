@@ -131,7 +131,9 @@ def test_on_cats_and_blueprints():
 
 def train_segmentation(args):
     model = Unet(layers=[8, 16, 32, 64, 128], output_channels=11)
-    transfer_knowledge(model, Path() / 'learned_models' / args.transfer, device=args.device)
+
+    model.load_state_dict(torch.load(Path() / 'learned_models' / args.load, map_location=device))
+    # transfer_knowledge(model, Path() / 'learned_models' / args.transfer, device=args.device)
 
     dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised()
 
@@ -151,7 +153,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--save', type=str, default="save")
-    parser.add_argument('--transfer', type=str, default="logged.pt")
+    parser.add_argument('--load', type=str, default="logged.pt")
     parser.add_argument('--resize', type=int, default=None)
 
     args = parser.parse_args()
