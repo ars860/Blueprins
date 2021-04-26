@@ -17,7 +17,7 @@ class AddGaussianNoise(object):
 
 
 if __name__ == '__main__':
-    _, dataloader_train, _, _ = get_dataloaders_unsupervised(dpi=50, workers=2, augmentations=AddGaussianNoise(std=0.1))
+    _, dataloader_train, _, _ = get_dataloaders_unsupervised(dpi=50, workers=2, augmentations=AddGaussianNoise(std=0.25))
     img, augmented = next(iter(dataloader_train))
 
     fig, (ax1, ax2) = plt.subplots(1, 2)

@@ -84,11 +84,11 @@ def train_as_segmantation(model, data_loader, mode='train', num_epochs=5, lr=1e-
         # losses = losses
 
         # if test_loader is None:
-        outputs.append([np.mean(losses), np.median(losses)])
+        outputs.append(np.mean(losses))
         # else:
         # losses_test = np.zeros(len(test_loader))
 
-    return np.vstack(outputs)
+    return np.array(outputs)
 
 
 def test_on_cats_and_blueprints():
