@@ -20,7 +20,7 @@ def transfer_knowledge(model, knowledge_path, device=device):
 
 
 def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epochs=5, lr=1e-4, dice=None, focal=False,
-                          device=device):
+                          device=device, checkpoint=None):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
 
@@ -74,6 +74,11 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
                 print('Epoch:{}/{}, Step:{}/{}, Loss:{:.6f}'.format(epoch + 1, num_epochs, i, len(data_loader),
                                                                     np.true_divide(train_losses.sum(),
                                                                                    (train_losses != 0).sum())))
+
+        if checkpoint is not None:
+            checkpoint(epoch, model)
+            # if epoch % checkpoint == 0:
+            #     torch.save(model.state_dict(), Path() / 'checpoints' / )
 
         test_losses = np.zeros(len(test_loader))
         with torch.no_grad():
@@ -137,7 +142,11 @@ def train_segmentation(args):
 
     dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised()
 
-    losses = train_as_segmantation(model, dataloader_train, dataloader_test, device=args.device, num_epochs=args.epochs, lr=args.lr)
+    def checkpoint(e, m):
+        if e % args.checkpoint == 0:
+            torch.save(m.state_dict(), Path() / 'checkpoints' / f'{args.save}_{e}epoch.pt')
+
+    losses = train_as_segmantation(model, dataloader_train, dataloader_test, device=args.device, num_epochs=args.epochs, lr=args.lr, checkpoint=checkpoint)
 
     # if args.save is not None:
     np.savetxt(Path() / "logs" / f'{args.save}.out', losses)
@@ -156,6 +165,7 @@ if __name__ == '__main__':
     parser.add_argument('--load', type=str, default=None)
     parser.add_argument('--resize', type=int, default=None)
     parser.add_argument('--transfer', type=str, default=None)
+    parser.add_argument('--checkpoint', type=str, default=10)
 
     args = parser.parse_args()
 

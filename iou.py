@@ -88,7 +88,8 @@ if __name__ == '__main__':
     model = Unet(layers=[8, 16, 32, 64, 128], output_channels=11).to(device)
 
     _, dataloader_train, _, dataloader_test = get_dataloaders_supervised()
-    model.load_state_dict(torch.load('learned_models/segmentation_no_transfer/without_transfer_100_1e-5.pt', map_location=device))
+    model.load_state_dict(torch.load('learned_models/without_transfer/without_transfer_100_1e-5.pt', map_location=device))
 
     dataloader_test_first = [next(iter(dataloader_train))]
-    iou_global(dataloader_test_first, model, device)
+    ious = iou_global(dataloader_test_first, model, device)
+    print(ious)
