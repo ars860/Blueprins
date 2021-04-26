@@ -52,7 +52,7 @@ def train_as_segmantation(model, data_loader, mode='train', num_epochs=5, lr=1e-
     outputs = []
     # test_outputs = []
     for epoch in range(num_epochs):
-        losses = np.zeros(len(data_loader))
+        train_losses = np.zeros(len(data_loader))
         # losses_test = np.zeros(len(test_loader))
 
         for i, (img, mask) in enumerate(data_loader):
@@ -69,22 +69,18 @@ def train_as_segmantation(model, data_loader, mode='train', num_epochs=5, lr=1e-
                 loss.backward()
                 optimizer.step()
 
-            losses[i] = loss.item()
+            train_losses[i] = loss.item()
             if i % 10 == 0 or i == len(data_loader) - 1:
                 print('Epoch:{}/{}, Step:{}/{}, Loss:{:.6f}'.format(epoch + 1, num_epochs, i, len(data_loader),
-                                                                    np.true_divide(losses.sum(), (losses != 0).sum())))
+                                                                    np.true_divide(train_losses.sum(), (train_losses != 0).sum())))
 
-        # if test_loader is not None:
-        # with torch.no_grad():
-        # for i, (img, mask) in enumerate(test_loader):
-        # losses_test[i] = criterion(model(img), mask)
-        # if mode == 'train':
-        # scheduler.step()
+        test_losses = np.zeros(len(test_loader))
+        with torch.no_grad():
+            for i, img in enumerate(test_loader):
+                img = img.to(device)
+                test_losses[i] = criterion(model(img), img)
 
-        # losses = losses
-
-        # if test_loader is None:
-        outputs.append(np.mean(losses))
+        outputs.append([np.mean(train_losses), np.mean(test_losses)])
         # else:
         # losses_test = np.zeros(len(test_loader))
 

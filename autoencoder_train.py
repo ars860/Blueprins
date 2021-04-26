@@ -48,12 +48,14 @@ def train_as_autoencoder(model, data_loader, test_loader=None, num_epochs=5, mod
             train_losses[i] = loss.item()
             if i % 10 == 0 or i == len(data_loader) - 1:
                 print('Epoch:{}/{}, Step:{}/{}, Loss:{:.4f}'.format(epoch + 1, num_epochs, i, len(data_loader),
-                                                                    np.true_divide(train_losses.sum(), (train_losses != 0).sum())))
+                                                                    np.true_divide(train_losses.sum(),
+                                                                                   (train_losses != 0).sum())))
 
         test_losses = np.zeros(len(test_loader))
-        for i, img in enumerate(test_loader):
-            img = img.to(device)
-            test_losses[i] = criterion(model(img), img)
+        with torch.no_grad():
+            for i, img in enumerate(test_loader):
+                img = img.to(device)
+                test_losses[i] = criterion(model(img), img)
 
         outputs.append([np.mean(train_losses), np.mean(test_losses)])
 
@@ -72,9 +74,11 @@ if __name__ == '__main__':
 
     model = Unet(layers=[8, 16, 32, 64, 128], output_channels=1)
     dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_unsupervised(dpi=50, workers=2,
-                                                                                                  augmentations=AddGaussianNoise(args.gaussian_noise))
+                                                                                                  augmentations=AddGaussianNoise(
+                                                                                                      args.gaussian_noise))
 
-    train_test_losses = train_as_autoencoder(model, dataloader_train, mode='train', num_epochs=1, device=args.device, lr=args.lr)
+    train_test_losses = train_as_autoencoder(model, dataloader_train, mode='train', num_epochs=1, device=args.device,
+                                             lr=args.lr)
 
     if args.save is not None:
         np.savetxt(Path() / 'logs' / f'{args.save}.log', train_test_losses)
