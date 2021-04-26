@@ -77,9 +77,9 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
 
         test_losses = np.zeros(len(test_loader))
         with torch.no_grad():
-            for i, img in enumerate(test_loader):
-                img = img.to(device)
-                test_losses[i] = criterion(model(img), img)
+            for i, (img, mask) in enumerate(test_loader):
+                img, mask = img.to(device), mask.to(device)
+                test_losses[i] = criterion(model(img), mask)
 
         outputs.append([np.mean(train_losses), np.mean(test_losses)])
         # else:
