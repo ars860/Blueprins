@@ -77,7 +77,7 @@ if __name__ == '__main__':
                                                                                                   augmentations=AddGaussianNoise(
                                                                                                       args.gaussian_noise))
 
-    train_test_losses = train_as_autoencoder(model, dataloader_train, mode='train', num_epochs=1, device=args.device,
+    train_test_losses = train_as_autoencoder(model, dataloader_train, mode='train', num_epochs=args.epochs, device=args.device,
                                              lr=args.lr)
 
     if args.save is not None:
