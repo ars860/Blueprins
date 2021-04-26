@@ -1,0 +1,4 @@
+usage: autoencoder_train.py [-h] [--device DEVICE] [--lr LR]
+                            [--gaussian_noise GAUSSIAN_NOISE] [--save SAVE]
+                            [--epochs EPOCHS]
+autoencoder_train.py: error: argument --gaussian_noise: invalid float value: '0.1_10epochs'
