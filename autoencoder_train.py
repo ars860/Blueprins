@@ -81,5 +81,5 @@ if __name__ == '__main__':
                                              lr=args.lr)
 
     if args.save is not None:
-        np.savetxt(Path() / 'logs' / f'{args.save}.log', train_test_losses)
+        np.savetxt(Path() / 'logs' / f'{args.save}.out', train_test_losses)
         torch.save(model.state_dict(), Path() / 'learned_models' / f'{args.save}.pt')
