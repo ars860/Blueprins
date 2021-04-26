@@ -8,12 +8,13 @@ import torch
 from torch import nn
 
 from dataset import get_dataloaders_supervised
+from iou import iou_multi_channel
 from train import device
 from unet import Unet
 
 
 def plot_sample(model, index, dataloader, samples=None, mode='show', filter=None, name_prefix="sample_",
-                path=Path() / 'pics', device=device):
+                path=Path() / 'pics', device=device, calc_iou=True):
     if not (mode == 'show' or mode == 'save'):
         raise ValueError('mode should be "save" or "show"')
 
@@ -26,15 +27,24 @@ def plot_sample(model, index, dataloader, samples=None, mode='show', filter=None
 
     result = nn.Sigmoid()(model(input_img.to(device)).squeeze()).cpu().detach().numpy()
 
+    iou = None
+    if calc_iou and filter is None:
+        filter = 0.5
+
     if filter is not None:
         result[result >= filter] = 1
         result[result < filter] = 0
+
+    if calc_iou:
+        iou = iou_multi_channel(result.astype(bool), mask.numpy().squeeze().astype(bool))
 
     fig, ax = plt.subplots(12, 2, figsize=[30, 100])
     ax[0][0].imshow(input_img.squeeze())
     # ax2.imshow(mask.squeeze())
     mask = mask.squeeze()
     for i in range(11):
+        if iou is not None:
+            ax[i + 1][0].set_title(f'iou: {iou[i]}')
         ax[1 + i][0].imshow(result[i, :])
         ax[1 + i][1].imshow(mask[i, :])
 
@@ -59,7 +69,7 @@ if __name__ == '__main__':
     parser.add_argument("--device", type=str, default='cuda:2')
     parser.add_argument("--test", type=bool, default=False)
     parser.add_argument("--mode", type=str, default='show')
-    parser.add_argument("--model", type=str, default='learned_models/without_transfer.pt')
+    parser.add_argument("--model", type=str, default='learned_models/segmentation_no_transfer/without_transfer_100_1e-5.pt')
     parser.add_argument("--save_name", type=str, default='pics/saved')
 
     args = parser.parse_args()

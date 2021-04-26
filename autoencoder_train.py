@@ -11,7 +11,7 @@ from train import device
 from unet import Unet
 
 
-def train_as_autoencoder(model, data_loader, test_loader=None, num_epochs=5, mode=None, device=device, lr=1e-3):
+def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=None, device=device, lr=1e-3):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
 
@@ -77,7 +77,7 @@ if __name__ == '__main__':
                                                                                                   augmentations=AddGaussianNoise(
                                                                                                       args.gaussian_noise))
 
-    train_test_losses = train_as_autoencoder(model, dataloader_train, mode='train', num_epochs=args.epochs, device=args.device,
+    train_test_losses = train_as_autoencoder(model, dataloader_train, dataloader_test, mode='train', num_epochs=args.epochs, device=args.device,
                                              lr=args.lr)
 
     if args.save is not None:
