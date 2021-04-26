@@ -44,7 +44,7 @@ def plot_sample(model, index, dataloader, samples=None, mode='show', filter=None
     mask = mask.squeeze()
     for i in range(11):
         if iou is not None:
-            ax[i + 1][0].set_title(f'iou: {iou[i]}')
+            ax[i + 1][0].set_title(f'iou: {iou[i]}', fontsize=24)
         ax[1 + i][0].imshow(result[i, :])
         ax[1 + i][1].imshow(mask[i, :])
 

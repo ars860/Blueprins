@@ -72,3 +72,7 @@ class Unet(nn.Module):
             nn.ReLU(),
         ]
         return nn.Sequential(*layers)
+
+    def sigmoid(self, x):
+        with torch.no_grad():
+            return self(x)

@@ -19,8 +19,8 @@ def transfer_knowledge(model, knowledge_path, device=device):
     model.load_state_dict(state_dict, strict=False)
 
 
-def train_as_segmantation(model, data_loader, mode='train', num_epochs=5, lr=1e-4, dice=None, focal=False,
-                          test_loader=None, device=device):
+def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epochs=5, lr=1e-4, dice=None, focal=False,
+                          device=device):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
 
@@ -72,7 +72,8 @@ def train_as_segmantation(model, data_loader, mode='train', num_epochs=5, lr=1e-
             train_losses[i] = loss.item()
             if i % 10 == 0 or i == len(data_loader) - 1:
                 print('Epoch:{}/{}, Step:{}/{}, Loss:{:.6f}'.format(epoch + 1, num_epochs, i, len(data_loader),
-                                                                    np.true_divide(train_losses.sum(), (train_losses != 0).sum())))
+                                                                    np.true_divide(train_losses.sum(),
+                                                                                   (train_losses != 0).sum())))
 
         test_losses = np.zeros(len(test_loader))
         with torch.no_grad():
@@ -136,7 +137,7 @@ def train_segmentation(args):
 
     dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised()
 
-    losses = train_as_segmantation(model, dataloader_train, device=args.device, num_epochs=args.epochs, lr=args.lr)
+    losses = train_as_segmantation(model, dataloader_train, dataloader_test, device=args.device, num_epochs=args.epochs, lr=args.lr)
 
     # if args.save is not None:
     np.savetxt(Path() / "logs" / f'{args.save}.out', losses)
