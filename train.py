@@ -78,7 +78,7 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
         if checkpoint is not None:
             checkpoint(epoch, model)
             # if epoch % checkpoint == 0:
-            #     torch.save(model.state_dict(), Path() / 'checpoints' / )
+            #     torch.save(model.state_dict(), Path() / 'checkpoints' / )
 
         test_losses = np.zeros(len(test_loader))
         with torch.no_grad():

@@ -98,9 +98,13 @@ class BlueprintsSupervisedDataset(Dataset):
 
 def get_dataloaders_supervised(root=str(Path() / 'blueprints'), image_folder='projs', mask_folder='mask.zip',
                                batch_size=1,  # images have different size
-                               workers=1,
+                               workers=2,
                                fraction=0.9):
     dataset_train = BlueprintsSupervisedDataset(root, image_folder, mask_folder, mode='train', fraction=fraction)
+
+    if fraction == 1.0:
+        return dataset_train, DataLoader(dataset_train, batch_size=batch_size, num_workers=workers)
+
     dataset_test = BlueprintsSupervisedDataset(root, image_folder, mask_folder, mode='test', fraction=fraction)
 
     return dataset_train, DataLoader(dataset_train, batch_size=batch_size, num_workers=workers), \

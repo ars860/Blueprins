@@ -56,11 +56,11 @@ def plot_sample(model, index, dataloader, samples=None, mode='show', filter=None
         print(f'saved: {save_path}')
 
 
-def plot_first_ten(model, dataloader, mode, name_prefix="sample_", device='cpu'):
+def plot_first_ten(model, dataloader, mode, name_prefix="sample_", device='cpu', calc_iou=True):
     samples = list(itertools.islice((iter(dataloader)), 10))
 
     for i in range(10):
-        plot_sample(model, i, dataloader, mode=mode, name_prefix=name_prefix, samples=samples, device=device)
+        plot_sample(model, i, dataloader, mode=mode, name_prefix=name_prefix, samples=samples, device=device, calc_iou=calc_iou)
 
 
 # matplotlib.use('module://backend_interagg')
