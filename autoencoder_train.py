@@ -54,8 +54,13 @@ def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=Non
         test_losses = np.zeros(len(test_loader))
         with torch.no_grad():
             for i, img in enumerate(test_loader):
-                img = img.to(device)
-                test_losses[i] = criterion(model(img), img)
+                if isinstance(img, list):
+                    img, augmented = img
+                else:
+                    augmented = img
+
+                img, augmented = img.to(device), augmented.to(device)
+                test_losses[i] = criterion(model(augmented), img)
 
         outputs.append([np.mean(train_losses), np.mean(test_losses)])
 
