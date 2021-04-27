@@ -98,9 +98,10 @@ class BlueprintsSupervisedDataset(Dataset):
 
 def get_dataloaders_supervised(root=str(Path() / 'blueprints'), image_folder='projs', mask_folder='mask.zip',
                                batch_size=1,  # images have different size
-                               workers=1):
-    dataset_train = BlueprintsSupervisedDataset(root, image_folder, mask_folder, mode='train')
-    dataset_test = BlueprintsSupervisedDataset(root, image_folder, mask_folder, mode='test')
+                               workers=1,
+                               fraction=0.9):
+    dataset_train = BlueprintsSupervisedDataset(root, image_folder, mask_folder, mode='train', fraction=fraction)
+    dataset_test = BlueprintsSupervisedDataset(root, image_folder, mask_folder, mode='test', fraction=fraction)
 
     return dataset_train, DataLoader(dataset_train, batch_size=batch_size, num_workers=workers), \
            dataset_test, DataLoader(dataset_test, batch_size=batch_size, num_workers=workers)
@@ -154,7 +155,13 @@ class BlueprintsUnsupervisedDataset(Dataset):
                  transforms: [Callable] = None,
                  seed: int = None,
                  fraction: float = 0.9,
-                 mode: str = None) -> None:
+                 mode: str = None,
+                 file_format=None,
+                 filter_required=False) -> None:
+        if file_format is not None and not (file_format == 'pdf' or file_format == 'pil'):
+            raise ValueError('Supported formats: "pdf", "pil"')
+        self.file_format = file_format
+
         if transforms is None:
             transforms = tr.ToTensor()
         else:
@@ -169,14 +176,20 @@ class BlueprintsUnsupervisedDataset(Dataset):
             raise OSError(f"{image_folder_path} does not exist.")
 
         if not fraction:
-            self.image_names = filter_files(sorted(image_folder_path.glob("*")))
+            self.image_names = sorted(image_folder_path.glob("*"))
+
+            if filter_required:
+                self.image_names = filter_files(self.image_names)
         else:
             if mode not in ["train", "test"]:
                 raise (ValueError(
                     f"{mode} is not a valid input. Acceptable values are train and test."
                 ))
             self.fraction = fraction
-            self.image_list = filter_files(np.array(sorted(image_folder_path.glob("*"))))
+            self.image_list = np.array(sorted(image_folder_path.glob("*")))
+
+            if filter_required:
+                self.image_names = filter_files(self.image_names)
 
             if seed:
                 np.random.seed(seed)
@@ -199,17 +212,39 @@ class BlueprintsUnsupervisedDataset(Dataset):
         # print(image_path)
 
         # with open(image_path, "rb") as image_file:
-        image = convert_from_path(image_path, dpi=self.dpi)[0].convert('L')  # Image.open(image_file)
+        if self.file_format is None:
+            _, file_extension = path.splitext(image_path)
+            if file_extension == '.pdf':
+                self.file_format = "pdf"
+            else:
+                self.file_format = "pil"
+
+        if self.file_format == 'pdf':
+            image = convert_from_path(image_path, dpi=self.dpi)[0].convert('L')  # Image.open(image_file)
+        else:
+            image = Image.open(image_path)
 
         if self.transforms:
             image = self.transforms(image)
         return image
 
 
-def get_dataloaders_unsupervised(dpi=50, root=str(Path() / 'xpc_11'), image_folder='Чертежи ХПЦ 11', batch_size=1,
-                                 workers=2, augmentations=None):
-    dataset_train = BlueprintsUnsupervisedDataset(root, image_folder, dpi=dpi, mode='train', transforms=augmentations)
-    dataset_test = BlueprintsUnsupervisedDataset(root, image_folder, dpi=dpi, mode='test')
+def get_dataloaders_unsupervised(dpi=50,
+                                 root=str(Path() / 'xpc_11'),
+                                 image_folder='Чертежи ХПЦ 11',
+                                 batch_size=1,
+                                 workers=2,
+                                 augmentations=None,
+                                 fraction=0.9,
+                                 file_format=None):
+    dataset_train = BlueprintsUnsupervisedDataset(root, image_folder, dpi=dpi, mode='train', transforms=augmentations,
+                                                  fraction=fraction, file_format=file_format)
+
+    if fraction == 1.0:
+        return dataset_train, DataLoader(dataset_train, batch_size=batch_size, num_workers=workers)
+
+    dataset_test = BlueprintsUnsupervisedDataset(root, image_folder, dpi=dpi, mode='test', transforms=augmentations,
+                                                 fraction=fraction, file_format=file_format)
 
     return dataset_train, DataLoader(dataset_train, batch_size=batch_size, num_workers=workers), \
            dataset_test, DataLoader(dataset_test, batch_size=batch_size, num_workers=workers)

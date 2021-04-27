@@ -69,15 +69,19 @@ if __name__ == '__main__':
     parser.add_argument('--gaussian_noise', type=float, default=0.5)
     parser.add_argument('--save', type=str, default=None)
     parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--dataset', type=str, default='projs')
 
     args = parser.parse_args()
 
     model = Unet(layers=[8, 16, 32, 64, 128], output_channels=1)
-    dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_unsupervised(dpi=50, workers=2,
-                                                                                                  augmentations=AddGaussianNoise(
-                                                                                                      args.gaussian_noise))
+    _, dataloader_train, _, dataloader_test = get_dataloaders_unsupervised(dpi=50,
+                                                                           workers=2,
+                                                                           image_folder=args.dataset,
+                                                                           augmentations=AddGaussianNoise(
+                                                                               args.gaussian_noise))
 
-    train_test_losses = train_as_autoencoder(model, dataloader_train, dataloader_test, mode='train', num_epochs=args.epochs, device=args.device,
+    train_test_losses = train_as_autoencoder(model, dataloader_train, dataloader_test, mode='train',
+                                             num_epochs=args.epochs, device=args.device,
                                              lr=args.lr)
 
     if args.save is not None:
