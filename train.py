@@ -140,7 +140,11 @@ def train_segmentation(args):
     if args.load is not None:
         model.load_state_dict(torch.load(Path() / 'learned_models' / args.load, map_location=args.device))
 
-    dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised()
+    imgs, masks = 'projs', 'mask.zip'
+    if args.cutout:
+        imgs, masks = 'projs_cutout', 'mask_cutout.zip'
+
+    dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised(image_folder=imgs, mask_folder=masks)
 
     def checkpoint(e, m):
         if e % args.checkpoint == 0:
@@ -166,6 +170,8 @@ if __name__ == '__main__':
     parser.add_argument('--resize', type=int, default=None)
     parser.add_argument('--transfer', type=str, default=None)
     parser.add_argument('--checkpoint', type=str, default=10)
+    parser.add_argument('--cutout', dest='cutout', action='store_true')
+    parser.set_defaults(cutout=False)
 
     args = parser.parse_args()
 
