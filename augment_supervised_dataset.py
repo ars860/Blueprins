@@ -31,13 +31,13 @@ def cutout_augmentation(img, mask, max_patch_size=50, patches_cnt=10):
         img[x1:x2, y1:y2] = 1
         mask[x1:x2, y1:y2] = 0
 
-    img, mask = img[np.newaxis, np.newaxis, ...], mask[np.newaxis, np.newaxis, ...]
+    img = img[np.newaxis, np.newaxis, ...]
 
     return img, mask
 
 
 def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, postfix='cutout', times=2):
-    with zipfile.ZipFile(Path() / 'blueprints' / 'mask_cutout.zip', 'w') as mask_file:
+    with zipfile.ZipFile(Path() / 'blueprints' / 'mask_cutout.zip', 'w', zipfile.ZIP_DEFLATED) as mask_file:
         for (img, mask), img_name, mask_name in zip(dataset, dataset.image_names, dataset.mask_names):
             img, mask = img.numpy(), mask.numpy()
             img_name, img_ext = splitext(basename(img_name))
@@ -49,6 +49,7 @@ def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, postfix='cutout
 
             with TemporaryFile() as numpy_temp:
                 np.save(numpy_temp, mask)
+                numpy_temp.seek(0)
                 mask_file.writestr(f'{mask_name}{mask_ext}', numpy_temp.read())
 
             for i in range(times):
@@ -59,6 +60,7 @@ def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, postfix='cutout
 
                 with TemporaryFile() as numpy_temp:
                     np.save(numpy_temp, mask_cutout)
+                    numpy_temp.seek(0)
                     mask_file.writestr(f'{mask_name}_{postfix}_{i}{mask_ext}', numpy_temp.read())
 
             # break
