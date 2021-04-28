@@ -84,18 +84,36 @@ def parse_stats_and_plot_my_format(file_name, take=None):
         # plt.show()
 
 
+def plot_like(path, like, take, second_path=None):
+    file_names = (Path() / path).glob('*')
+    file_names = list(filter(lambda file_name: like in str(file_name) and '.out' in str(file_name), file_names))
+
+    for fn in file_names:
+        if second_path is not None:
+            parse_stats_and_plot(Path() / second_path, args.take)
+
+        parse_stats_and_plot(fn, take)
+
+        plt.legend()
+        plt.show()
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--path", type=str, default='stats.txt')
     parser.add_argument("--take", type=int, default=None)
     parser.add_argument("--second_path", type=str, default=None)
+    parser.add_argument("--like", type=str, default=None)
 
     args = parser.parse_args()
 
-    parse_stats_and_plot(Path() / args.path, args.take)
+    if args.like is not None:
+        plot_like(args.path, args.like, args.take, second_path=args.second_path)
+    else:
+        parse_stats_and_plot(Path() / args.path, args.take)
 
-    if args.second_path is not None:
-        parse_stats_and_plot(Path() / args.second_path, args.take)
+        if args.second_path is not None:
+            parse_stats_and_plot(Path() / args.second_path, args.take)
 
-    plt.legend()
-    plt.show()
+        plt.legend()
+        plt.show()
