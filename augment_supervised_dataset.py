@@ -38,7 +38,7 @@ def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, args):
     (Path() / args.root / args.projs).mkdir(parents=True, exist_ok=True)
 
     with zipfile.ZipFile(Path() / args.root / args.masks, 'w', zipfile.ZIP_DEFLATED) as mask_file:
-        for (img, mask), img_name, mask_name in zip(dataset, dataset.image_names, dataset.mask_names):
+        for i, ((img, mask), img_name, mask_name) in enumerate(zip(dataset, dataset.image_names, dataset.mask_names)):
             img, mask = img.numpy(), mask.numpy()
             img_name, img_ext = splitext(basename(img_name))
             # mask_name, mask_ext = splitext(mask_name)
@@ -52,18 +52,20 @@ def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, args):
                 numpy_temp.seek(0)
                 mask_file.writestr(f'{mask_name}{mask_ext}', numpy_temp.read())
 
-            for i in range(args.times):
+            for j in range(args.times):
                 img_cutout, mask_cutout = cutout_augmentation(img.copy(), mask.copy(), patches_cnt=args.cnt, max_patch_size=args.max_size)
 
                 Image.fromarray(np.uint8(img_cutout.squeeze() * 255), 'L').save(
-                    Path() / args.root / args.projs / f'{img_name}_{args.type}_{i}{img_ext}')
+                    Path() / args.root / args.projs / f'{img_name}_{args.type}_{j}{img_ext}')
 
                 with TemporaryFile() as numpy_temp:
                     np.save(numpy_temp, mask_cutout)
                     numpy_temp.seek(0)
-                    mask_file.writestr(f'{mask_name}_{args.type}_{i}{mask_ext}', numpy_temp.read())
+                    mask_file.writestr(f'{mask_name}_{args.type}_{j}{mask_ext}', numpy_temp.read())
 
             # break
+            if i % 10 == 0:
+                print(f'Files processed: {i}/{len(dataset)}')
 
 
 if __name__ == '__main__':
