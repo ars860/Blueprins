@@ -146,6 +146,11 @@ def train_segmentation(args):
     if args.cutout:
         imgs, masks = 'projs_cutout', 'mask_cutout.zip'
 
+    if args.projs is not None:
+        imgs = args.projs
+    if args.masks is not None:
+        masks = args.masks
+
     dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised(image_folder=imgs, mask_folder=masks, filter_test=args.cutout)
 
     save_dir, _ = os.path.split(args.save)
@@ -178,6 +183,8 @@ if __name__ == '__main__':
     parser.add_argument('--transfer', type=str, default=None)
     parser.add_argument('--checkpoint', type=int, default=10)
     parser.add_argument('--cutout', dest='cutout', action='store_true')
+    parser.add_argument('--projs', type=str, default=None)
+    parser.add_argument('--masks', type=str, default=None)
     parser.set_defaults(cutout=False)
 
     args = parser.parse_args()
