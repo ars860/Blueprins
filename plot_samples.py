@@ -66,17 +66,18 @@ def plot_first_ten(model, dataloader, mode, name_prefix="sample_", device='cpu',
 # matplotlib.use('module://backend_interagg')
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--device", type=str, default='cuda:2')
+    parser.add_argument("--device", type=str, default='cuda')
     parser.add_argument("--test", type=bool, default=False)
     parser.add_argument("--mode", type=str, default='show')
-    parser.add_argument("--model", type=str, default='learned_models/segmentation_no_transfer/without_transfer_100_1e-5.pt')
-    parser.add_argument("--save_name", type=str, default='pics/saved')
+    parser.add_argument("--model", type=str, default='learned_models/with_transfer_projs/200epochs_gauss_05_cutout_50patches_1e-4.pt')
+    parser.add_argument("--save_name", type=str, default='')
+    parser.add_argument("--root", type=str, default='blueprints')
 
     args = parser.parse_args()
 
     model = Unet(layers=[8, 16, 32, 64, 128], output_channels=11).to(args.device)
     model.load_state_dict(torch.load(args.model, map_location=args.device))
 
-    _, dataloader_train, _, dataloader_test = get_dataloaders_supervised()
+    _, dataloader_train, _, dataloader_test = get_dataloaders_supervised(root=args.root, mask_folder='mask_cutout.zip', image_folder='projs_cutout')
 
     plot_first_ten(model, dataloader_test if args.test else dataloader_train, args.mode, args.save_name, device=args.device)

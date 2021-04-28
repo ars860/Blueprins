@@ -11,31 +11,26 @@ from PIL import Image
 from dataset import get_dataloaders_supervised, BlueprintsSupervisedDataset
 
 
-def cutout_augmentation(img, mask, max_patch_size=50, patches_cnt=10):
+def cutout_augmentation(img, mask, min_patch_size=0, max_patch_size=50, patches_cnt=10, color=1.0):
     img = img.squeeze()
     w, h = img.shape
 
     for _ in range(patches_cnt):
-        x1 = random.randrange(w)
-        x2 = x1 + random.randrange(min(max_patch_size, w - x1))
-        y1 = random.randrange(h)
-        y2 = y1 + random.randrange(min(max_patch_size, h - y1))
+        x1 = random.randrange(w - min_patch_size)
+        x2 = x1 + random.randrange(min_patch_size, min(max_patch_size, w - x1))
+        y1 = random.randrange(h - min_patch_size)
+        y2 = y1 + random.randrange(min_patch_size, min(max_patch_size, h - y1))
 
-        if x1 > x2:
-            x1, x2 = x2, x1
-        if y1 > y2:
-            y1, y2 = y2, y1
-
-        img[x1:x2, y1:y2] = 1
-        mask[x1:x2, y1:y2] = 0
-
-    img = img[np.newaxis, np.newaxis, ...]
+        img[x1:x2, y1:y2] = color
+        mask[:, x1:x2, y1:y2] = 0
 
     return img, mask
 
 
 def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, args):
+    # (Path() / args.root / args.projs).rmdir()
     (Path() / args.root / args.projs).mkdir(parents=True, exist_ok=True)
+    args.max_size = max(args.max_size, args.min_size) + 1
 
     with zipfile.ZipFile(Path() / args.root / args.masks, 'w', zipfile.ZIP_DEFLATED) as mask_file:
         for i, ((img, mask), img_name, mask_name) in enumerate(zip(dataset, dataset.image_names, dataset.mask_names)):
@@ -44,16 +39,22 @@ def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, args):
             # mask_name, mask_ext = splitext(mask_name)
             mask_ext = '.npy'
 
-            Image.fromarray(np.uint8(img.squeeze() * 255), 'L').save(
-                Path() / args.root / args.projs / f'{img_name}{img_ext}')
+            assert args.drop_initial is not None
+            if not args.drop_initial:
+                Image.fromarray(np.uint8(img.squeeze() * 255), 'L').save(
+                    Path() / args.root / args.projs / f'{img_name}{img_ext}')
 
-            with TemporaryFile() as numpy_temp:
-                np.save(numpy_temp, mask)
-                numpy_temp.seek(0)
-                mask_file.writestr(f'{mask_name}{mask_ext}', numpy_temp.read())
+                with TemporaryFile() as numpy_temp:
+                    np.save(numpy_temp, mask)
+                    numpy_temp.seek(0)
+                    mask_file.writestr(f'{mask_name}{mask_ext}', numpy_temp.read())
 
             for j in range(args.times):
-                img_cutout, mask_cutout = cutout_augmentation(img.copy(), mask.copy(), patches_cnt=args.cnt, max_patch_size=args.max_size)
+                img_cutout, mask_cutout = cutout_augmentation(img.copy(), mask.copy(),
+                                                              patches_cnt=args.cnt,
+                                                              min_patch_size=args.min_size,
+                                                              max_patch_size=args.max_size,
+                                                              color=args.val)
 
                 Image.fromarray(np.uint8(img_cutout.squeeze() * 255), 'L').save(
                     Path() / args.root / args.projs / f'{img_name}_{args.type}_{j}{img_ext}')
@@ -63,7 +64,7 @@ def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, args):
                     numpy_temp.seek(0)
                     mask_file.writestr(f'{mask_name}_{args.type}_{j}{mask_ext}', numpy_temp.read())
 
-            # break
+            break
             if i % 10 == 0:
                 print(f'Files processed: {i}/{len(dataset)}')
 
@@ -75,13 +76,20 @@ if __name__ == '__main__':
     parser.add_argument('--times', type=int, default=2)
     parser.add_argument('--seed', type=int, default=None)
     parser.add_argument('--max_size', type=int, default=50)
+    parser.add_argument('--min_size', type=int, default=0)
+    parser.add_argument('--val', type=float, default=1.0)
 
     parser.add_argument('--root', type=str, default='blueprints')
     parser.add_argument('--masks', type=str, default='mask_cutout.zip')
     parser.add_argument('--projs', type=str, default='projs_cutout')
     # parser.add_argument('--postfix', type=str, default='projs_cutout')
 
+    parser.add_argument('--drop_initial', action='store_true')
+
     args = parser.parse_args()
+
+    if args.root == 'blueprints' and (args.masks == 'mask.zip' or args.projs == 'projs'):
+        raise ValueError("Ne lez' debil!")
 
     if args.seed is not None:
         random.seed(args.seed)
