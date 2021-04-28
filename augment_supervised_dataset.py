@@ -11,7 +11,7 @@ from PIL import Image
 from dataset import get_dataloaders_supervised, BlueprintsSupervisedDataset
 
 
-def cutout_augmentation(img, mask, min_patch_size=0, max_patch_size=50, patches_cnt=10, color=1.0):
+def cutout_augmentation(img, mask, min_patch_size=0, max_patch_size=50, patches_cnt=10, color=1.0, remove_from_mask=True):
     img = img.squeeze()
     w, h = img.shape
 
@@ -22,7 +22,8 @@ def cutout_augmentation(img, mask, min_patch_size=0, max_patch_size=50, patches_
         y2 = y1 + random.randrange(min_patch_size, min(max_patch_size, h - y1))
 
         img[x1:x2, y1:y2] = color
-        mask[:, x1:x2, y1:y2] = 0
+        if remove_from_mask:
+            mask[:, x1:x2, y1:y2] = 0
 
     return img, mask
 
@@ -54,7 +55,8 @@ def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, args):
                                                               patches_cnt=args.cnt,
                                                               min_patch_size=args.min_size,
                                                               max_patch_size=args.max_size,
-                                                              color=args.val)
+                                                              color=args.val,
+                                                              remove_from_mask=args.cut_mask)
 
                 Image.fromarray(np.uint8(img_cutout.squeeze() * 255), 'L').save(
                     Path() / args.root / args.projs / f'{img_name}_{args.type}_{j}{img_ext}')
@@ -64,7 +66,7 @@ def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, args):
                     numpy_temp.seek(0)
                     mask_file.writestr(f'{mask_name}_{args.type}_{j}{mask_ext}', numpy_temp.read())
 
-            break
+            # break
             if i % 10 == 0:
                 print(f'Files processed: {i}/{len(dataset)}')
 
@@ -85,6 +87,7 @@ if __name__ == '__main__':
     # parser.add_argument('--postfix', type=str, default='projs_cutout')
 
     parser.add_argument('--drop_initial', action='store_true')
+    parser.add_argument('--cut_mask', action='store_true')
 
     args = parser.parse_args()
 

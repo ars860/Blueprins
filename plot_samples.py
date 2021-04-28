@@ -69,7 +69,7 @@ if __name__ == '__main__':
     parser.add_argument("--device", type=str, default='cuda')
     parser.add_argument("--test", type=bool, default=False)
     parser.add_argument("--mode", type=str, default='show')
-    parser.add_argument("--model", type=str, default='learned_models/with_transfer_projs/200epochs_gauss_05_cutout_50patches_1e-4.pt')
+    parser.add_argument("--model", type=str, default='learned_models/with_transfer_projs/200epochs_gauss_05_1e-4.pt')
     parser.add_argument("--save_name", type=str, default='')
     parser.add_argument("--root", type=str, default='blueprints')
 
