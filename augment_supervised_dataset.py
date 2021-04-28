@@ -28,7 +28,8 @@ def cutout_augmentation(img, mask, min_patch_size=0, max_patch_size=50, patches_
     return img, mask
 
 
-def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, args):
+# if args.drop_initial is not None: drop_initial only from test HARDCODED 0.9, DONT SHUFFLE DATASET AFTER IT!!!
+def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, args, fraction=0.9):
     # (Path() / args.root / args.projs).rmdir()
     (Path() / args.root / args.projs).mkdir(parents=True, exist_ok=True)
     args.max_size = max(args.max_size, args.min_size) + 1
@@ -40,8 +41,7 @@ def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, args):
             # mask_name, mask_ext = splitext(mask_name)
             mask_ext = '.npy'
 
-            assert args.drop_initial is not None
-            if not args.drop_initial:
+            if not args.drop_initial or i / len(dataset) > fraction:
                 Image.fromarray(np.uint8(img.squeeze() * 255), 'L').save(
                     Path() / args.root / args.projs / f'{img_name}{img_ext}')
 

@@ -14,7 +14,7 @@ from torch.utils.data import Dataset, DataLoader
 
 
 def filter_cutout(names):
-    return list(filter(lambda name: 'cutout' in str(name), names))
+    return list(filter(lambda name: 'cutout' not in path.basename(str(name)), names))
 
 
 class BlueprintsSupervisedDataset(Dataset):
