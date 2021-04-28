@@ -16,7 +16,7 @@ def parse_stats_double_number(file_name, take=None):
         if take is not None:
             lines = lines[:take]
 
-        numbers_regex = r'([\d.\-e]+) ([\d.\-e]+)'
+        numbers_regex = r'([\d.\-\+e]+) ([\d.\-\+e]+)'
 
         if re.match(numbers_regex, lines[0]) is None:
             numbers_regex = r'([\d.\-e]+)'

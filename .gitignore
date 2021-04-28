@@ -1,3 +1,7 @@
 .idea
 __pycache__
 .ipynb_checkpoints
+logs/save.out
+learned_models/save.pt
+blueprints
+xpc_11

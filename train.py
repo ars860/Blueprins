@@ -144,10 +144,10 @@ def train_segmentation(args):
     if args.cutout:
         imgs, masks = 'projs_cutout', 'mask_cutout.zip'
 
-    dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised(image_folder=imgs, mask_folder=masks)
+    dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised(image_folder=imgs, mask_folder=masks, filter_test=args.cutout)
 
     def checkpoint(e, m):
-        if e % args.checkpoint == 0:
+        if args.checkpoint != -1 and e % args.checkpoint == 0:
             torch.save(m.state_dict(), Path() / 'checkpoints' / f'{args.save}_{e}epoch.pt')
 
     losses = train_as_segmantation(model, dataloader_train, dataloader_test, device=args.device, num_epochs=args.epochs, lr=args.lr, checkpoint=checkpoint)
@@ -164,12 +164,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cuda')
     parser.add_argument('--epochs', type=int, default=10)
-    parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--save', type=str, default="save")
     parser.add_argument('--load', type=str, default=None)
     parser.add_argument('--resize', type=int, default=None)
     parser.add_argument('--transfer', type=str, default=None)
-    parser.add_argument('--checkpoint', type=str, default=10)
+    parser.add_argument('--checkpoint', type=int, default=10)
     parser.add_argument('--cutout', dest='cutout', action='store_true')
     parser.set_defaults(cutout=False)
 

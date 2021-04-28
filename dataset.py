@@ -13,6 +13,10 @@ from pdf2image import convert_from_path
 from torch.utils.data import Dataset, DataLoader
 
 
+def filter_cutout(names):
+    return list(filter(lambda name: 'cutout' in str(name), names))
+
+
 class BlueprintsSupervisedDataset(Dataset):
     def __init__(self,
                  root: str,
@@ -22,11 +26,13 @@ class BlueprintsSupervisedDataset(Dataset):
                  seed: int = None,
                  fraction: float = 0.9,
                  mode: str = None,
-                 zip_archive=True) -> None:
+                 zip_archive=True,
+                 filter_test=None) -> None:
 
         self.root = root
         self.transforms = transforms
         self.zip_archive = zip_archive
+        self.filter_test = filter_test
 
         self.image_folder_path = Path(self.root) / image_folder
         self.mask_folder_path = Path(self.root) / mask_folder
@@ -65,6 +71,9 @@ class BlueprintsSupervisedDataset(Dataset):
                 self.mask_names = self.mask_list[
                                   int(np.ceil(len(self.mask_list) * self.fraction)):]
 
+                if self.filter_test is not None:
+                    self.image_names, self.mask_names = self.filter_test(self.image_names), self.filter_test(self.mask_names)
+
             if self.zip_archive:
                 self.mask_names = list(
                     map(lambda name: 'mask/' + path.splitext(path.split(name)[1])[0], self.image_names))
@@ -99,13 +108,14 @@ class BlueprintsSupervisedDataset(Dataset):
 def get_dataloaders_supervised(root=str(Path() / 'blueprints'), image_folder='projs', mask_folder='mask.zip',
                                batch_size=1,  # images have different size
                                workers=2,
-                               fraction=0.9):
+                               fraction=0.9,
+                               filter_test=False):
     dataset_train = BlueprintsSupervisedDataset(root, image_folder, mask_folder, mode='train', fraction=fraction)
 
     if fraction == 1.0:
         return dataset_train, DataLoader(dataset_train, batch_size=batch_size, num_workers=workers)
 
-    dataset_test = BlueprintsSupervisedDataset(root, image_folder, mask_folder, mode='test', fraction=fraction)
+    dataset_test = BlueprintsSupervisedDataset(root, image_folder, mask_folder, mode='test', fraction=fraction, filter_test=filter_cutout if filter_test else None)
 
     return dataset_train, DataLoader(dataset_train, batch_size=batch_size, num_workers=workers), \
            dataset_test, DataLoader(dataset_test, batch_size=batch_size, num_workers=workers)

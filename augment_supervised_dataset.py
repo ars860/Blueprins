@@ -1,14 +1,12 @@
-import itertools
-import os.path
+import argparse
 import random
-from pathlib import Path
-
-from PIL import Image
-from tempfile import TemporaryFile
 import zipfile
 from os.path import basename, splitext
+from pathlib import Path
+from tempfile import TemporaryFile
 
 import numpy as np
+from PIL import Image
 
 from dataset import get_dataloaders_supervised, BlueprintsSupervisedDataset
 
@@ -36,7 +34,7 @@ def cutout_augmentation(img, mask, max_patch_size=50, patches_cnt=10):
     return img, mask
 
 
-def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, postfix='cutout', times=2):
+def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, args):
     with zipfile.ZipFile(Path() / 'blueprints' / 'mask_cutout.zip', 'w', zipfile.ZIP_DEFLATED) as mask_file:
         for (img, mask), img_name, mask_name in zip(dataset, dataset.image_names, dataset.mask_names):
             img, mask = img.numpy(), mask.numpy()
@@ -52,21 +50,33 @@ def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, postfix='cutout
                 numpy_temp.seek(0)
                 mask_file.writestr(f'{mask_name}{mask_ext}', numpy_temp.read())
 
-            for i in range(times):
-                img_cutout, mask_cutout = cutout_augmentation(img.copy(), mask.copy(), patches_cnt=20)
+            for i in range(args.times):
+                img_cutout, mask_cutout = cutout_augmentation(img.copy(), mask.copy(), patches_cnt=args.cnt, max_patch_size=args.max_size)
 
                 Image.fromarray(np.uint8(img_cutout.squeeze() * 255), 'L').save(
-                    Path() / 'blueprints' / 'projs_cutout' / f'{img_name}_{postfix}_{i}{img_ext}')
+                    Path() / 'blueprints' / 'projs_cutout' / f'{img_name}_{args.postfix}_{i}{img_ext}')
 
                 with TemporaryFile() as numpy_temp:
                     np.save(numpy_temp, mask_cutout)
                     numpy_temp.seek(0)
-                    mask_file.writestr(f'{mask_name}_{postfix}_{i}{mask_ext}', numpy_temp.read())
+                    mask_file.writestr(f'{mask_name}_{args.postfix}_{i}{mask_ext}', numpy_temp.read())
 
             # break
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--type', type=str, default='cutout')
+    parser.add_argument('--cnt', type=int, default=50)
+    parser.add_argument('--times', type=int, default=2)
+    parser.add_argument('--seed', type=int, default=None)
+    parser.add_argument('--max_size', type=int, default=50)
+
+    args = parser.parse_args()
+
+    if args.seed is not None:
+        random.seed(args.seed)
+
     dataset, dataloader = get_dataloaders_supervised(fraction=1.0)
 
     # samples = list(itertools.islice((iter(dataloader)), 1))
@@ -74,5 +84,5 @@ if __name__ == '__main__':
     # image, mask = samples[0]
     # Image.fromarray(np.uint8(image.numpy().squeeze() * 255), 'L').show()
 
-    augment_dataset_cutout(dataset)
+    augment_dataset_cutout(dataset, args)
     # cutout_augmentation(samples[0][0], samples[0][1])
