@@ -9,6 +9,8 @@ from dataset import get_dataloaders_unsupervised, get_dataloaders_supervised
 from losses import focal_loss, dice_loss
 from unet import Unet
 
+import os
+
 device = 'cuda'
 
 
@@ -145,6 +147,11 @@ def train_segmentation(args):
         imgs, masks = 'projs_cutout', 'mask_cutout.zip'
 
     dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised(image_folder=imgs, mask_folder=masks, filter_test=args.cutout)
+
+    save_dir, _ = os.path.split(args.save)
+    (Path() / 'checkpoints' / save_dir).mkdir(parents=True, exist_ok=True)
+    (Path() / 'logs' / save_dir).mkdir(parents=True, exist_ok=True)
+    (Path() / 'learned_models' / save_dir).mkdir(parents=True, exist_ok=True)
 
     def checkpoint(e, m):
         if args.checkpoint != -1 and e % args.checkpoint == 0:
