@@ -1,0 +1,5 @@
+usage: train.py [-h] [--device DEVICE] [--epochs EPOCHS] [--lr LR]
+                [--save SAVE] [--load LOAD] [--resize RESIZE]
+                [--transfer TRANSFER] [--checkpoint CHECKPOINT] [--cutout]
+                [--projs PROJS] [--masks MASKS] [--root ROOT]
+train.py: error: unrecognized arguments: --
