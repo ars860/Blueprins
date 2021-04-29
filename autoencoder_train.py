@@ -1,4 +1,5 @@
 import argparse
+import os
 from pathlib import Path
 
 import numpy as np
@@ -91,5 +92,9 @@ if __name__ == '__main__':
                                              lr=args.lr)
 
     if args.save is not None:
+        save_dir, _ = os.path.split(args.save)
+        (Path() / 'logs' / save_dir).mkdir(parents=True, exist_ok=True)
+        (Path() / 'learned_models' / save_dir).mkdir(parents=True, exist_ok=True)
+
         np.savetxt(Path() / 'logs' / f'{args.save}.out', train_test_losses)
         torch.save(model.state_dict(), Path() / 'learned_models' / f'{args.save}.pt')
