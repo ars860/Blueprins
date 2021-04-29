@@ -89,9 +89,11 @@ def plot_like(path, like, take, second_path=None):
     file_names = list(filter(lambda file_name: like in str(file_name) and '.out' in str(file_name), file_names))
 
     for fn in file_names:
+        plt.figure(figsize=[10, 10])
         if second_path is not None:
             parse_stats_and_plot(Path() / second_path, args.take)
 
+        # plt.figure(figsize=[20,20])
         parse_stats_and_plot(fn, take)
 
         plt.legend()

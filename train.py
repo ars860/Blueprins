@@ -154,9 +154,11 @@ def train_segmentation(args):
     dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised(root=args.root, image_folder=imgs, mask_folder=masks, filter_test=args.cutout)
 
     save_dir, _ = os.path.split(args.save)
-    (Path() / 'checkpoints' / save_dir).mkdir(parents=True, exist_ok=True)
+    if args.checkpoint != -1:
+        (Path() / 'checkpoints' / save_dir).mkdir(parents=True, exist_ok=True)
     (Path() / 'logs' / save_dir).mkdir(parents=True, exist_ok=True)
-    (Path() / 'learned_models' / save_dir).mkdir(parents=True, exist_ok=True)
+    if not args.dont_save_model:
+        (Path() / 'learned_models' / save_dir).mkdir(parents=True, exist_ok=True)
 
     def checkpoint(e, m):
         if args.checkpoint != -1 and e % args.checkpoint == 0:
@@ -166,7 +168,8 @@ def train_segmentation(args):
 
     # if args.save is not None:
     np.savetxt(Path() / "logs" / f'{args.save}.out', losses)
-    torch.save(model.state_dict(), Path() / 'learned_models' / f'{args.save}.pt')
+    if not args.dont_save_model:
+        torch.save(model.state_dict(), Path() / 'learned_models' / f'{args.save}.pt')
 
 
 # if __name__ == '__main__':
@@ -186,6 +189,7 @@ if __name__ == '__main__':
     parser.add_argument('--projs', type=str, default=None)
     parser.add_argument('--masks', type=str, default=None)
     parser.add_argument('--root', type=str, default=str(Path() / 'blueprints'))
+    parser.add_argument('--dont_save_model', action='store_true')
 
     args = parser.parse_args()
 
