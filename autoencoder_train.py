@@ -40,6 +40,8 @@ def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=Non
             optimizer.zero_grad()
 
             x = model(augmented)
+            # Maybe I am ultra stupid
+            x = torch.sigmoid(x)
             loss = criterion(x, img)
 
             if mode == 'train':
