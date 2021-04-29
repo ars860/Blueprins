@@ -49,10 +49,10 @@ class Unet(nn.Module):
         self.down3 = self.enc_block(l2, l3)  # 64
         self.down4 = self.enc_block(l3, l4)  # 32
         self.down5 = self.enc_block(l4, l5)
-        self.up4 = UpBlock(l4)
-        self.up3 = UpBlock(l3)
-        self.up2 = UpBlock(l2)
-        self.up1 = UpBlock(l1)
+        self.up4 = UpBlock(l4, skip)
+        self.up3 = UpBlock(l3, skip)
+        self.up2 = UpBlock(l2, skip)
+        self.up1 = UpBlock(l1, skip)
         self.final = nn.Conv2d(l1, output_channels, kernel_size=1)
 
     def forward(self, x):

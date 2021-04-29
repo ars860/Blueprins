@@ -37,13 +37,14 @@ def get_last_conv_weights(model: Unet):
     return skip_mean, residual_mean
 
 
+# skip_connection version:
 # Если так, то со skipconection-а масимум модуля в 1.8 раз больше
 # Средняя величина по части тензора соответствующей skip-у = 1e-4
 # Для residual = -1e-6
 if __name__ == '__main__':
-    model = Unet(layers=[8, 16, 32, 64, 128], output_channels=1).to(device)
+    model = Unet(layers=[8, 16, 32, 64, 128], output_channels=1, skip=False).to(device)
     model.load_state_dict(
-        torch.load(Path() / 'learned_models' / 'autoencoder_projs' / '10epochs_gauss_05_1e-4.pt', map_location=device))
+        torch.load(Path() / 'learned_models' / 'no_skip' / 'autoencoder' / '1e-4_10epochs.pt', map_location=device))
 
-    get_last_UpBlock_weights(model)
-    # get_last_conv_weights(model)
+    # get_last_UpBlock_weights(model)
+    get_last_conv_weights(model)
