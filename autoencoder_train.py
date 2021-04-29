@@ -75,10 +75,11 @@ if __name__ == '__main__':
     parser.add_argument('--save', type=str, default=None)
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--dataset', type=str, default='projs')
+    parser.add_argument('--no_skip', action='store_true')
 
     args = parser.parse_args()
 
-    model = Unet(layers=[8, 16, 32, 64, 128], output_channels=1)
+    model = Unet(layers=[8, 16, 32, 64, 128], output_channels=1, skip=not args.no_skip)
     _, dataloader_train, _, dataloader_test = get_dataloaders_unsupervised(dpi=50,
                                                                            workers=2,
                                                                            image_folder=args.dataset,

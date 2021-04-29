@@ -5,6 +5,7 @@ from os.path import basename, splitext
 from pathlib import Path
 from tempfile import TemporaryFile
 
+import shutil
 import numpy as np
 from PIL import Image
 
@@ -30,6 +31,8 @@ def cutout_augmentation(img, mask, min_patch_size=0, max_patch_size=50, patches_
 
 # if args.drop_initial is not None: drop_initial only from test HARDCODED 0.9, DONT SHUFFLE DATASET AFTER IT!!!
 def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, args, fraction=0.9):
+    shutil.rmtree(Path() / args.root / args.projs)
+
     # (Path() / args.root / args.projs).rmdir()
     (Path() / args.root / args.projs).mkdir(parents=True, exist_ok=True)
     args.max_size = max(args.max_size, args.min_size) + 1
@@ -66,7 +69,9 @@ def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, args, fraction=
                     numpy_temp.seek(0)
                     mask_file.writestr(f'{mask_name}_{args.type}_{j}{mask_ext}', numpy_temp.read())
 
-            # break
+            if args.test:
+                break
+
             if i % 10 == 0:
                 print(f'Files processed: {i}/{len(dataset)}')
 
@@ -88,6 +93,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--drop_initial', action='store_true')
     parser.add_argument('--cut_mask', action='store_true')
+    parser.add_argument('--test', action='store_true')
 
     args = parser.parse_args()
 

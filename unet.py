@@ -6,34 +6,39 @@ N_CLASSES = 11
 
 
 class UpBlock(nn.Module):
-    def __init__(self, ch_out):
+    def __init__(self, ch_out, skip=True):
         super(UpBlock, self).__init__()
+        self.skip = skip
         self.upconv = nn.ConvTranspose2d(ch_out * 2, ch_out * 2, kernel_size=3, padding=1, stride=2, output_padding=1)
-        # self.upconv = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)  # TODO: ConvTranspose2d
-        self.conv1 = nn.Conv2d(ch_out * 3, ch_out, kernel_size=3, padding=1)
+        # self.upconv = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+        self.conv1 = nn.Conv2d(ch_out * 3 if skip else ch_out * 2, ch_out, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(ch_out, ch_out, kernel_size=3, padding=1)
 
-    def forward(self, x, u, padding=None):
+    def forward(self, x, u=None, padding=None):
+        if u is None and self.skip:
+            raise ValueError("Expected skip connection")
+
         if padding is None:
             padding = [x.shape[2] % 2, x.shape[3] % 2]
 
         u = self.upconv(u)
         u = F.pad(u, [padding[1], 0, padding[0], 0])
 
-        diffY = u.size()[2] - x.size()[2]
-        diffX = u.size()[3] - x.size()[3]
+        # This is useless probably
+        # diffY = u.size()[2] - x.size()[2]
+        # diffX = u.size()[3] - x.size()[3]
+        #
+        # x = F.pad(x, [diffX // 2, diffX - diffX // 2,
+        #               diffY // 2, diffY - diffY // 2])
 
-        x = F.pad(x, [diffX // 2, diffX - diffX // 2,
-                      diffY // 2, diffY - diffY // 2])
-
-        x1 = torch.cat((x, u), dim=1)
+        x1 = torch.cat((x, u), dim=1) if self.skip else u
         x2 = self.conv1(x1)
         x3 = self.conv2(x2)
         return x3
 
 
 class Unet(nn.Module):
-    def __init__(self, layers, output_channels=N_CLASSES):
+    def __init__(self, layers, output_channels=N_CLASSES, skip=True):
         # if layers is None:
         #     layers = [64, 128, 256, 512]
 
@@ -73,6 +78,19 @@ class Unet(nn.Module):
         ]
         return nn.Sequential(*layers)
 
+    def get_last_block_inputs(self, x):
+        with torch.no_grad():
+            x1 = self.down1(x)
+            x2 = self.down2(x1)
+            x3 = self.down3(x2)
+            x4 = self.down4(x3)
+            u5 = self.down5(x4)
+            u4 = self.up4(x4, u5, padding=[x4.shape[2] % 2, x4.shape[3] % 2])
+            u3 = self.up3(x3, u4, padding=[x3.shape[2] % 2, x3.shape[3] % 2])
+            u2 = self.up2(x2, u3, padding=[x2.shape[2] % 2, x2.shape[3] % 2])
+
+            return x1, u2
+
     def sigmoid(self, x):
         with torch.no_grad():
-            return self(x)
+            return torch.sigmoid(self(x))
