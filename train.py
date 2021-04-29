@@ -134,7 +134,7 @@ def test_on_cats_and_blueprints():
 
 
 def train_segmentation(args):
-    model = Unet(layers=[8, 16, 32, 64, 128], output_channels=11)
+    model = Unet(layers=[8, 16, 32, 64, 128], output_channels=11, skip=not args.no_skip)
 
     if args.transfer is not None:
         transfer_knowledge(model, Path() / 'learned_models' / args.transfer, device=args.device)
@@ -190,6 +190,7 @@ if __name__ == '__main__':
     parser.add_argument('--masks', type=str, default=None)
     parser.add_argument('--root', type=str, default=str(Path() / 'blueprints'))
     parser.add_argument('--dont_save_model', action='store_true')
+    parser.add_argument('--no_skip', action='store_true')
 
     args = parser.parse_args()
 
