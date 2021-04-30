@@ -84,11 +84,14 @@ def parse_stats_and_plot_my_format(file_name, take=None):
         # plt.show()
 
 
-def plot_like(path, like, take, second_path=None):
+def plot_like(path, like, take, second_path=None, titles=None):
+    if titles is None:
+        titles = []
+
     file_names = (Path() / path).glob('*')
     file_names = list(filter(lambda file_name: like in str(file_name) and '.out' in str(file_name), file_names))
 
-    for fn in file_names:
+    for i, fn in enumerate(file_names):
         plt.figure(figsize=[10, 10])
         if second_path is not None:
             parse_stats_and_plot(Path() / second_path, args.take)
@@ -96,6 +99,7 @@ def plot_like(path, like, take, second_path=None):
         # plt.figure(figsize=[20,20])
         parse_stats_and_plot(fn, take)
 
+        plt.title(titles[i] if i < len(titles) else '')
         plt.legend()
         plt.show()
 
@@ -109,8 +113,12 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    titles = None
+    # titles = ['Autoencoder', 'Autoencoder with gaussian noise']
+    # titles = []
+
     if args.like is not None:
-        plot_like(args.path, args.like, args.take, second_path=args.second_path)
+        plot_like(args.path, args.like, args.take, second_path=args.second_path, titles=titles)
     else:
         parse_stats_and_plot(Path() / args.path, args.take)
 

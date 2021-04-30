@@ -245,7 +245,7 @@ class BlueprintsUnsupervisedDataset(Dataset):
 
 def get_dataloaders_unsupervised(dpi=50,
                                  root=str(Path() / 'xpc_11'),
-                                 image_folder='Чертежи ХПЦ 11',
+                                 image_folder='projs',
                                  batch_size=1,
                                  workers=2,
                                  augmentations=None,

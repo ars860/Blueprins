@@ -31,7 +31,8 @@ def cutout_augmentation(img, mask, min_patch_size=0, max_patch_size=50, patches_
 
 # if args.drop_initial is not None: drop_initial only from test HARDCODED 0.9, DONT SHUFFLE DATASET AFTER IT!!!
 def augment_dataset_cutout(dataset: BlueprintsSupervisedDataset, args, fraction=0.9):
-    shutil.rmtree(Path() / args.root / args.projs)
+    if (Path() / args.root / args.projs).exists():
+        shutil.rmtree(Path() / args.root / args.projs)
 
     # (Path() / args.root / args.projs).rmdir()
     (Path() / args.root / args.projs).mkdir(parents=True, exist_ok=True)

@@ -95,44 +95,6 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
     return np.array(outputs)
 
 
-def test_on_cats_and_blueprints():
-    import matplotlib.pyplot as plt
-    from PIL import Image
-    import numpy as np
-    from pathlib import Path
-    import torch.nn as nn
-
-    model = Unet(layers=[8, 16, 32, 64, 128], output_channels=1)
-    transfer_knowledge(model, Path() / 'learned_models' / 'autoencoder_noise_0.1_sgd.pt')
-    dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_unsupervised(dpi=50)
-
-    criterion = nn.MSELoss()
-
-    model.eval()
-    # img = next(iter(dataloader_train))
-    img = torch.Tensor(np.array(Image.open('E:/acady/Desktop/83211.jpg').convert('L')).reshape([1, 1, 173, -1]))
-    img_decoded = model(img)
-
-    print(img.shape)
-    print(img_decoded.shape)
-    loss = criterion(img, img_decoded)
-    print(loss)
-
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=[30, 20])
-    a = ax1.imshow(img.squeeze())
-    ax2.imshow(img_decoded.cpu().detach().numpy().squeeze())
-
-    # img_decoded = img_decoded.cpu().detach().numpy().squeeze()
-    # img_decoded = img_decoded.transpose(1, 2, 0)  # np.swapaxes(img_decoded, 0, 2)
-    # img_decoded = np.uint8((img_decoded + np.min(img_decoded)) / (np.max(img_decoded) + np.min(img_decoded)) * 255)
-    # Image.fromarray(img_decoded, 'RGB').show()
-
-    # fig.colorbar(a, ax=fig)
-    fig.suptitle(f'Shape: {img.shape} Loss: {loss}', fontsize=30)
-    plt.show()
-    # train_as_autoencoder(model, dataloader_train)
-
-
 def train_segmentation(args):
     model = Unet(layers=[8, 16, 32, 64, 128], output_channels=11, skip=not args.no_skip)
 
@@ -182,7 +144,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--save', type=str, default="save")
     parser.add_argument('--load', type=str, default=None)
-    parser.add_argument('--resize', type=int, default=None)
+    # parser.add_argument('--resize', type=int, default=None)
     parser.add_argument('--transfer', type=str, default=None)
     parser.add_argument('--checkpoint', type=int, default=10)
     parser.add_argument('--cutout', action='store_true')
