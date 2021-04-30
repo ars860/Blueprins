@@ -87,7 +87,7 @@ if __name__ == '__main__':
                                                                            workers=2,
                                                                            image_folder=args.dataset,
                                                                            augmentations=AddGaussianNoise(
-                                                                               args.gaussian_noise))
+                                                                               std=args.gaussian_noise))
 
     train_test_losses = train_as_autoencoder(model, dataloader_train, dataloader_test, mode='train',
                                              num_epochs=args.epochs, device=args.device,
