@@ -63,7 +63,7 @@ def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=Non
                     augmented = img
 
                 img, augmented = img.to(device), augmented.to(device)
-                test_losses[i] = criterion(model(augmented), img)
+                test_losses[i] = criterion(torch.sigmoid(model(img)), img)
 
         outputs.append([np.mean(train_losses), np.mean(test_losses)])
 
