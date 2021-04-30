@@ -10,9 +10,14 @@ import numpy as np
 from PIL import Image
 
 from dataset import get_dataloaders_supervised, BlueprintsSupervisedDataset
+from albumentations.augmentations.functional import hflip, vflip, cutout
 
 
-def cutout_augmentation(img, mask, min_patch_size=0, max_patch_size=50, patches_cnt=10, color=1.0, remove_from_mask=True):
+# from albumentations.augmentations.transforms import CoarseDropout
+
+
+def cutout_augmentation(img, mask, min_patch_size=0, max_patch_size=50, patches_cnt=10, color=1.0,
+                        remove_from_mask=True):
     img = img.squeeze()
     w, h = img.shape
 
@@ -27,6 +32,21 @@ def cutout_augmentation(img, mask, min_patch_size=0, max_patch_size=50, patches_
             mask[:, x1:x2, y1:y2] = 0
 
     return img, mask
+
+
+def cutout_flips_augmentation(img, mask, v=True, h=True):
+    flips = [lambda i, m: (i, m)]
+    if v:
+        flips.append(lambda i, m: (vflip(i), vflip(m)))
+    if h:
+        flips.append(lambda i, m: (hflip(i), hflip(m)))
+
+    results = []
+    for flip in flips:
+        img_a, mask_a = flip(img, mask)
+        results.append(cutout_augmentation(img_a, mask_a))
+
+    return results
 
 
 # if args.drop_initial is not None: drop_initial only from test HARDCODED 0.9, DONT SHUFFLE DATASET AFTER IT!!!

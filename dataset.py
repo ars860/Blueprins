@@ -85,7 +85,7 @@ class BlueprintsSupervisedDataset(Dataset):
         image_path = self.image_names[index]
         mask_path = self.mask_names[index]
         with open(image_path, "rb") as image_file:
-            image = Image.open(image_file)
+            image = 255 - np.array(Image.open(image_file))
 
             if self.zip_archive:
                 with np.load(self.mask_folder_path) as archive:
@@ -236,7 +236,7 @@ class BlueprintsUnsupervisedDataset(Dataset):
         if self.file_format == 'pdf':
             image = convert_from_path(image_path, dpi=self.dpi)[0].convert('L')  # Image.open(image_file)
         else:
-            image = Image.open(image_path)
+            image = 255 - np.array(Image.open(image_path))
 
         if self.transforms:
             image = self.transforms(image)
