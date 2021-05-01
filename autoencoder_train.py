@@ -40,7 +40,6 @@ def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=Non
             optimizer.zero_grad()
 
             x = model(augmented)
-            # Maybe I am ultra stupid
             x = torch.sigmoid(x)
             loss = criterion(x, img if not invert else 1. - img)
 
@@ -63,7 +62,7 @@ def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=Non
                     augmented = img
 
                 img, augmented = img.to(device), augmented.to(device)
-                test_losses[i] = criterion(torch.sigmoid(model(img)), img)
+                test_losses[i] = criterion(torch.sigmoid(model(img)), img if not invert else 1. - img)
 
         outputs.append([np.mean(train_losses), np.mean(test_losses)])
 
