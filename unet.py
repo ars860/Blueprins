@@ -1,17 +1,24 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from enum import Enum
 
 N_CLASSES = 11
 
 
+class SkipType(Enum):
+    SKIP = 0
+    NO_SKIP = 1
+    ZERO_SKIP = 2
+
+
 class UpBlock(nn.Module):
-    def __init__(self, ch_out, skip=True):
+    def __init__(self, ch_out, skip=SkipType.SKIP):
         super(UpBlock, self).__init__()
         self.skip = skip
         self.upconv = nn.ConvTranspose2d(ch_out * 2, ch_out * 2, kernel_size=3, padding=1, stride=2, output_padding=1)
         # self.upconv = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
-        self.conv1 = nn.Conv2d(ch_out * 3 if skip else ch_out * 2, ch_out, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(ch_out * 2 if skip == SkipType.NO_SKIP else ch_out * 3, ch_out, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(ch_out, ch_out, kernel_size=3, padding=1)
 
     def forward(self, x, u=None, padding=None):
@@ -31,14 +38,21 @@ class UpBlock(nn.Module):
         # x = F.pad(x, [diffX // 2, diffX - diffX // 2,
         #               diffY // 2, diffY - diffY // 2])
 
-        x1 = torch.cat((x, u), dim=1) if self.skip else u
+        if self.skip == SkipType.SKIP:
+            x1 = torch.cat((x, u), dim=1)
+        elif self.skip == SkipType.ZERO_SKIP:
+            x1 = torch.cat((torch.zeros_like(x), u), dim=1)
+        else:
+            x1 = u
+
+        # x1 = torch.cat((x, u), dim=1) if self.skip else u
         x2 = self.conv1(x1)
         x3 = self.conv2(x2)
         return x3
 
 
 class Unet(nn.Module):
-    def __init__(self, layers, output_channels=N_CLASSES, skip=True):
+    def __init__(self, layers, output_channels=N_CLASSES, skip=SkipType.SKIP):
         # if layers is None:
         #     layers = [64, 128, 256, 512]
 

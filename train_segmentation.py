@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 from dataset import get_dataloaders_unsupervised, get_dataloaders_supervised
 from losses import focal_loss, dice_loss
-from unet import Unet
+from unet import Unet, SkipType
 
 import os
 
@@ -96,7 +96,8 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
 
 
 def train_segmentation(args):
-    model = Unet(layers=[8, 16, 32, 64, 128], output_channels=11, skip=not args.no_skip)
+    skip_type = SkipType.SKIP if not args.no_skip else SkipType.NO_SKIP
+    model = Unet(layers=[8, 16, 32, 64, 128], output_channels=11, skip=skip_type)
 
     if args.transfer is not None:
         transfer_knowledge(model, Path() / 'learned_models' / args.transfer, device=args.device)

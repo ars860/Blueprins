@@ -9,7 +9,7 @@ import torch
 from augmentation import AddGaussianNoise
 from dataset import get_dataloaders_unsupervised
 from train_segmentation import device
-from unet import Unet
+from unet import Unet, SkipType
 
 
 def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=None, device=device, lr=1e-3, invert=False):
@@ -78,11 +78,21 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--dataset', type=str, default='projs')
     parser.add_argument('--no_skip', action='store_true')
+    parser.add_argument('--zero_skip', action='store_true')
     parser.add_argument('--invert', action='store_true')
 
     args = parser.parse_args()
 
-    model = Unet(layers=[8, 16, 32, 64, 128], output_channels=1, skip=not args.no_skip)
+    if args.no_skip and args.zero_skip:
+        raise ValueError('Only one skip type can be specified: <no_skip> or <zero_skip>')
+
+    skip_type = SkipType.SKIP
+    if args.no_skip:
+        skip_type = SkipType.NO_SKIP
+    if args.zero_skip:
+        skip_type = SkipType.ZERO_SKIP
+
+    model = Unet(layers=[8, 16, 32, 64, 128], output_channels=1, skip=skip_type)
     _, dataloader_train, _, dataloader_test = get_dataloaders_unsupervised(dpi=50,
                                                                            workers=2,
                                                                            image_folder=args.dataset,
