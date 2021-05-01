@@ -8,11 +8,11 @@ import torch
 
 from augmentation import AddGaussianNoise
 from dataset import get_dataloaders_unsupervised
-from train import device
+from train_segmentation import device
 from unet import Unet
 
 
-def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=None, device=device, lr=1e-3):
+def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=None, device=device, lr=1e-3, invert=False):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
 
@@ -42,7 +42,7 @@ def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=Non
             x = model(augmented)
             # Maybe I am ultra stupid
             x = torch.sigmoid(x)
-            loss = criterion(x, img)
+            loss = criterion(x, img if not invert else 1. - img)
 
             if mode == 'train':
                 loss.backward()
@@ -79,6 +79,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--dataset', type=str, default='projs')
     parser.add_argument('--no_skip', action='store_true')
+    parser.add_argument('--invert', action='store_true')
 
     args = parser.parse_args()
 
@@ -91,7 +92,7 @@ if __name__ == '__main__':
 
     train_test_losses = train_as_autoencoder(model, dataloader_train, dataloader_test, mode='train',
                                              num_epochs=args.epochs, device=args.device,
-                                             lr=args.lr)
+                                             lr=args.lr, invert=args.invert)
 
     if args.save is not None:
         save_dir, _ = os.path.split(args.save)

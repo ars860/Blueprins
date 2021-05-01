@@ -41,42 +41,41 @@ class BlueprintsSupervisedDataset(Dataset):
         if not self.mask_folder_path.exists():
             raise OSError(f"{self.mask_folder_path} does not exist.")
 
-        if not fraction:
-            self.image_names = sorted(self.image_folder_path.glob("*"))
-            self.mask_names = sorted(self.mask_folder_path.glob("*"))
+        self.image_names = np.array(sorted(self.image_folder_path.glob("*")))
+        if not zip_archive:
+            self.mask_names = np.array(sorted(self.mask_folder_path.glob("*")))
         else:
+            self.mask_names = np.array(list(
+                map(lambda name: 'mask/' + path.splitext(path.split(name)[1])[0], self.image_names)))
+
+        if fraction:
             if mode not in ["train", "test"]:
                 raise (ValueError(
                     f"{mode} is not a valid input. Acceptable values are Train and Test."
                 ))
             self.fraction = fraction
-            self.image_list = np.array(sorted(self.image_folder_path.glob("*")))
-            self.mask_list = np.array(sorted(self.mask_folder_path.glob("*")))
 
             if seed:
                 np.random.seed(seed)
-                indices = np.arange(len(self.image_list))
+                indices = np.arange(len(self.image_names))
                 np.random.shuffle(indices)
-                self.image_list = self.image_list[indices]
-                self.mask_list = self.mask_list[indices]
+                self.image_names = self.image_names[indices]
+                self.mask_names = self.mask_names[indices]
 
             if mode == "train":
-                self.image_names = self.image_list[:int(
-                    np.ceil(len(self.image_list) * self.fraction))]
-                self.mask_names = self.mask_list[:int(
-                    np.ceil(len(self.mask_list) * self.fraction))]
+                self.image_names = self.image_names[:int(
+                    np.ceil(len(self.image_names) * self.fraction))]
+                self.mask_names = self.mask_names[:int(
+                    np.ceil(len(self.mask_names) * self.fraction))]
             else:
-                self.image_names = self.image_list[
-                                   int(np.ceil(len(self.image_list) * self.fraction)):]
-                self.mask_names = self.mask_list[
-                                  int(np.ceil(len(self.mask_list) * self.fraction)):]
+                self.image_names = self.image_names[
+                                   int(np.ceil(len(self.image_names) * self.fraction)):]
+                self.mask_names = self.mask_names[
+                                  int(np.ceil(len(self.mask_names) * self.fraction)):]
 
                 if self.filter_test is not None:
-                    self.image_names, self.mask_names = self.filter_test(self.image_names), self.filter_test(self.mask_names)
-
-            if self.zip_archive:
-                self.mask_names = list(
-                    map(lambda name: 'mask/' + path.splitext(path.split(name)[1])[0], self.image_names))
+                    self.image_names, self.mask_names = self.filter_test(self.image_names), self.filter_test(
+                        self.mask_names)
 
     def __len__(self) -> int:
         return len(self.image_names)
@@ -85,7 +84,7 @@ class BlueprintsSupervisedDataset(Dataset):
         image_path = self.image_names[index]
         mask_path = self.mask_names[index]
         with open(image_path, "rb") as image_file:
-            image = 255 - np.array(Image.open(image_file))
+            image = Image.open(image_file)  # 255 - np.array(Image.open(image_file))
 
             if self.zip_archive:
                 with np.load(self.mask_folder_path) as archive:
@@ -105,17 +104,31 @@ class BlueprintsSupervisedDataset(Dataset):
             return image, mask.squeeze()
 
 
-def get_dataloaders_supervised(root=str(Path() / 'blueprints'), image_folder='projs', mask_folder='mask.zip',
+def get_dataloaders_supervised(root='blueprints', image_folder='projs', mask_folder='mask.zip',
                                batch_size=1,  # images have different size
                                workers=2,
                                fraction=0.9,
-                               filter_test=False):
-    dataset_train = BlueprintsSupervisedDataset(root, image_folder, mask_folder, mode='train', fraction=fraction)
+                               filter_test=False,
+                               shuffle_seed=None):
+    glob = list(map(os.path.basename, list((Path() / root).glob('*'))))
+
+    if 'train' in glob and 'test' in glob:
+        dataset_train = BlueprintsSupervisedDataset(str(Path() / root / 'train'), image_folder, mask_folder,
+                                                    mode='train', fraction=None)
+        dataset_test = BlueprintsSupervisedDataset(str(Path() / root / 'test'), image_folder, mask_folder, mode='test',
+                                                   fraction=None)
+
+        return dataset_train, DataLoader(dataset_train, batch_size=batch_size, num_workers=workers), \
+               dataset_test, DataLoader(dataset_test, batch_size=batch_size, num_workers=workers)
+
+    dataset_train = BlueprintsSupervisedDataset(root, image_folder, mask_folder, mode='train', fraction=fraction,
+                                                seed=shuffle_seed)
 
     if fraction == 1.0:
         return dataset_train, DataLoader(dataset_train, batch_size=batch_size, num_workers=workers)
 
-    dataset_test = BlueprintsSupervisedDataset(root, image_folder, mask_folder, mode='test', fraction=fraction, filter_test=filter_cutout if filter_test else None)
+    dataset_test = BlueprintsSupervisedDataset(root, image_folder, mask_folder, mode='test', fraction=fraction,
+                                               filter_test=filter_cutout if filter_test else None, seed=shuffle_seed)
 
     return dataset_train, DataLoader(dataset_train, batch_size=batch_size, num_workers=workers), \
            dataset_test, DataLoader(dataset_test, batch_size=batch_size, num_workers=workers)
@@ -236,7 +249,7 @@ class BlueprintsUnsupervisedDataset(Dataset):
         if self.file_format == 'pdf':
             image = convert_from_path(image_path, dpi=self.dpi)[0].convert('L')  # Image.open(image_file)
         else:
-            image = 255 - np.array(Image.open(image_path))
+            image = Image.open(image_path)  # 255 - np.array(Image.open(image_path))
 
         if self.transforms:
             image = self.transforms(image)

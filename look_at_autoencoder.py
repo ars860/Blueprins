@@ -48,7 +48,7 @@ def get_last_conv_weights(model: Unet):
 if __name__ == '__main__':
     model = Unet(layers=[8, 16, 32, 64, 128], output_channels=1).to(device)
     model.load_state_dict(
-        torch.load(Path() / 'learned_models' / 'autoencoder' / '1e-4_10epochs.pt', map_location=device))
+        torch.load(Path() / 'learned_models' / 'autoencoder' / '1e-4_10epochs_no_invertion.pt', map_location=device))
 
     get_last_UpBlock_weights(model)
 

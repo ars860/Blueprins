@@ -9,7 +9,7 @@ from torch import nn
 
 from dataset import get_dataloaders_supervised
 from iou import iou_multi_channel
-from train import device
+from train_segmentation import device
 from unet import Unet
 
 
