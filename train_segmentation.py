@@ -152,7 +152,7 @@ if __name__ == '__main__':
     parser.add_argument('--masks', type=str, default=None)
     parser.add_argument('--root', type=str, default=str(Path() / 'blueprints'))
     parser.add_argument('--dont_save_model', action='store_true')
-    # parser.add_argument('--no_skip', action='store_true')
+    parser.add_argument('--no_skip', action='store_true')
 
     args = parser.parse_args()
 
