@@ -13,13 +13,16 @@ class SkipType(Enum):
 
 
 class UpBlock(nn.Module):
-    def __init__(self, ch_out, skip=SkipType.SKIP):
+    def __init__(self, ch_out, skip=SkipType.SKIP, dropout=False):
         super(UpBlock, self).__init__()
         self.skip = skip
         self.upconv = nn.ConvTranspose2d(ch_out * 2, ch_out * 2, kernel_size=3, padding=1, stride=2, output_padding=1)
         # self.upconv = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         self.conv1 = nn.Conv2d(ch_out * 2 if skip == SkipType.NO_SKIP else ch_out * 3, ch_out, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(ch_out, ch_out, kernel_size=3, padding=1)
+
+        if dropout:
+            self.dropout = nn.Dropout(p=0.2)
 
     def forward(self, x, u=None, padding=None):
         if u is None and self.skip:
@@ -31,13 +34,6 @@ class UpBlock(nn.Module):
         u = self.upconv(u)
         u = F.pad(u, [padding[1], 0, padding[0], 0])
 
-        # This is useless probably
-        # diffY = u.size()[2] - x.size()[2]
-        # diffX = u.size()[3] - x.size()[3]
-        #
-        # x = F.pad(x, [diffX // 2, diffX - diffX // 2,
-        #               diffY // 2, diffY - diffY // 2])
-
         if self.skip == SkipType.SKIP:
             x1 = torch.cat((x, u), dim=1)
         elif self.skip == SkipType.ZERO_SKIP:
@@ -48,11 +44,13 @@ class UpBlock(nn.Module):
         # x1 = torch.cat((x, u), dim=1) if self.skip else u
         x2 = self.conv1(x1)
         x3 = self.conv2(x2)
+        if getattr(self, 'dropout', None) is not None:
+            x3 = self.dropout(x3)
         return x3
 
 
 class Unet(nn.Module):
-    def __init__(self, layers, output_channels=N_CLASSES, skip=SkipType.SKIP):
+    def __init__(self, layers, output_channels=N_CLASSES, skip=SkipType.SKIP, dropout=False):
         # if layers is None:
         #     layers = [64, 128, 256, 512]
 
@@ -63,10 +61,10 @@ class Unet(nn.Module):
         self.down3 = self.enc_block(l2, l3)  # 64
         self.down4 = self.enc_block(l3, l4)  # 32
         self.down5 = self.enc_block(l4, l5)
-        self.up4 = UpBlock(l4, skip)
-        self.up3 = UpBlock(l3, skip)
-        self.up2 = UpBlock(l2, skip)
-        self.up1 = UpBlock(l1, skip)
+        self.up4 = UpBlock(l4, skip, dropout)
+        self.up3 = UpBlock(l3, skip, dropout)
+        self.up2 = UpBlock(l2, skip, dropout)
+        self.up1 = UpBlock(l1, skip, dropout)
         self.final = nn.Conv2d(l1, output_channels, kernel_size=1)
 
     def forward(self, x):

@@ -97,7 +97,7 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
 
 def train_segmentation(args):
     skip_type = SkipType.SKIP if not args.no_skip else SkipType.NO_SKIP
-    model = Unet(layers=[8, 16, 32, 64, 128], output_channels=11, skip=skip_type)
+    model = Unet(layers=[8, 16, 32, 64, 128], output_channels=11, skip=skip_type, dropout=args.dropout)
 
     if args.transfer is not None:
         transfer_knowledge(model, Path() / 'learned_models' / args.transfer, device=args.device)
@@ -154,6 +154,7 @@ if __name__ == '__main__':
     parser.add_argument('--root', type=str, default=str(Path() / 'blueprints'))
     parser.add_argument('--dont_save_model', action='store_true')
     parser.add_argument('--no_skip', action='store_true')
+    parser.add_argument('--dropout', action='store_true')
 
     args = parser.parse_args()
 
