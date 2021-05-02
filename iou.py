@@ -39,7 +39,7 @@ def iou_global(dataloader, model, device):
         for img, mask in dataloader:
             img, mask = img.to(device), mask.to(device)
 
-            result = torch.sigmoid(model(img))
+            result = model(img)
 
             iou = iou_multi_channel(result.cpu().detach().numpy().squeeze() > 0.5,
                                     mask.cpu().numpy().squeeze().astype(bool))

@@ -25,7 +25,7 @@ def plot_sample(model, index, dataloader, samples=None, mode='show', filter=None
 
     input_img, mask = samples[index]
 
-    result = nn.Sigmoid()(model(input_img.to(device)).squeeze()).cpu().detach().numpy()
+    result = model(input_img.to(device).squeeze()).cpu().detach().numpy()
 
     iou = None
     if calc_iou and filter is None:

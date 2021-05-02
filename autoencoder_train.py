@@ -40,7 +40,7 @@ def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=Non
             optimizer.zero_grad()
 
             x = model(augmented)
-            x = torch.sigmoid(x)
+            # x = torch.sigmoid(x)
             loss = criterion(x, img if not invert else 1. - img)
 
             if mode == 'train':
@@ -62,7 +62,7 @@ def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=Non
                     augmented = img
 
                 img, augmented = img.to(device), augmented.to(device)
-                test_losses[i] = criterion(torch.sigmoid(model(img)), img if not invert else 1. - img)
+                test_losses[i] = criterion(model(img), img if not invert else 1. - img)
 
         outputs.append([np.mean(train_losses), np.mean(test_losses)])
 
@@ -81,6 +81,8 @@ if __name__ == '__main__':
     parser.add_argument('--zero_skip', action='store_true')
     parser.add_argument('--invert', action='store_true')
 
+    parser.add_argument('--layers', type=int, nargs='+', default=[8, 16, 32, 64, 128])
+
     args = parser.parse_args()
 
     if args.no_skip and args.zero_skip:
@@ -92,7 +94,7 @@ if __name__ == '__main__':
     if args.zero_skip:
         skip_type = SkipType.ZERO_SKIP
 
-    model = Unet(layers=[8, 16, 32, 64, 128], output_channels=1, skip=skip_type)
+    model = Unet(layers=args.layers, output_channels=1, skip=skip_type)
     _, dataloader_train, _, dataloader_test = get_dataloaders_unsupervised(dpi=50,
                                                                            workers=2,
                                                                            image_folder=args.dataset,

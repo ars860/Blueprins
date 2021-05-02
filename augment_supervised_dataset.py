@@ -12,10 +12,18 @@ from PIL import Image
 from dataset import get_dataloaders_supervised, BlueprintsSupervisedDataset
 
 
-# from albumentations.augmentations.functional import hflip, vflip, cutout
+# from albumentations.augmentations.transforms import MaskDropout
 
 
 # from albumentations.augmentations.transforms import CoarseDropout
+
+# def mask_dropout(cnt):
+#     def res(img, mask):
+#         channels = random.sample(range(mask.shape[1]), cnt)
+#
+#         for channel in channels:
+#             img[mask[:, channel] == 1] = 0
+#             mask[mask[:, channel] == 1] = 0
 
 
 def cutout_augmentation(img, mask, min_patch_size=0, max_patch_size=50, patches_cnt=10, color=1.0,
