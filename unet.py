@@ -13,7 +13,7 @@ class SkipType(Enum):
 
 
 class UpBlock(nn.Module):
-    def __init__(self, ch_out, skip=SkipType.SKIP, dropout=False):
+    def __init__(self, ch_out, skip=SkipType.SKIP, dropout=None):
         super(UpBlock, self).__init__()
         self.skip = skip
         self.upconv = nn.ConvTranspose2d(ch_out * 2, ch_out * 2, kernel_size=3, padding=1, stride=2, output_padding=1)
@@ -21,8 +21,8 @@ class UpBlock(nn.Module):
         self.conv1 = nn.Conv2d(ch_out * 2 if skip == SkipType.NO_SKIP else ch_out * 3, ch_out, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(ch_out, ch_out, kernel_size=3, padding=1)
 
-        if dropout:
-            self.dropout = nn.Dropout(p=0.2)
+        if dropout is not None:
+            self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, u=None, padding=None):
         if u is None and self.skip:
@@ -50,7 +50,7 @@ class UpBlock(nn.Module):
 
 
 class Unet(nn.Module):
-    def __init__(self, layers, output_channels=N_CLASSES, skip=SkipType.SKIP, dropout=False):
+    def __init__(self, layers, output_channels=N_CLASSES, skip=SkipType.SKIP, dropout=None):
         super(Unet, self).__init__()
         prev_layer = 1
         for i, layer in enumerate(layers, start=1):

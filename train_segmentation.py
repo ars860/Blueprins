@@ -154,7 +154,7 @@ if __name__ == '__main__':
     parser.add_argument('--root', type=str, default=str(Path() / 'blueprints'))
     parser.add_argument('--dont_save_model', action='store_true')
     parser.add_argument('--no_skip', action='store_true')
-    parser.add_argument('--dropout', action='store_true')
+    parser.add_argument('--dropout', type=float, default=None)
 
     parser.add_argument('--layers', type=int, nargs='+', default=[8, 16, 32, 64, 128])
 
