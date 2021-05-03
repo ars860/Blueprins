@@ -263,15 +263,16 @@ def get_dataloaders_unsupervised(dpi=50,
                                  workers=2,
                                  augmentations=None,
                                  fraction=0.9,
-                                 file_format=None):
+                                 file_format=None,
+                                 shuffle_seed=None):
     dataset_train = BlueprintsUnsupervisedDataset(root, image_folder, dpi=dpi, mode='train', transforms=augmentations,
-                                                  fraction=fraction, file_format=file_format)
+                                                  fraction=fraction, file_format=file_format, seed=shuffle_seed)
 
     if fraction == 1.0:
         return dataset_train, DataLoader(dataset_train, batch_size=batch_size, num_workers=workers)
 
     dataset_test = BlueprintsUnsupervisedDataset(root, image_folder, dpi=dpi, mode='test', transforms=augmentations,
-                                                 fraction=fraction, file_format=file_format)
+                                                 fraction=fraction, file_format=file_format, seed=shuffle_seed)
 
     return dataset_train, DataLoader(dataset_train, batch_size=batch_size, num_workers=workers), \
            dataset_test, DataLoader(dataset_test, batch_size=batch_size, num_workers=workers)

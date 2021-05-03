@@ -12,7 +12,8 @@ from train_segmentation import device
 from unet import Unet, SkipType
 
 
-def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=None, device=device, lr=1e-3, invert=False):
+def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=None, device=device, lr=1e-3,
+                         invert=False):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
 
@@ -73,13 +74,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cuda:2')
     parser.add_argument('--lr', type=float, default=1e-3)
-    parser.add_argument('--gaussian_noise', type=float, default=0.5)
+    parser.add_argument('--gaussian_noise', type=float, default=None)
     parser.add_argument('--save', type=str, default=None)
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--dataset', type=str, default='projs')
     parser.add_argument('--no_skip', action='store_true')
     parser.add_argument('--zero_skip', action='store_true')
     parser.add_argument('--invert', action='store_true')
+    parser.add_argument('--shuffle_seed', type=int, default=None)
 
     parser.add_argument('--layers', type=int, nargs='+', default=[8, 16, 32, 64, 128])
 
@@ -98,7 +100,9 @@ if __name__ == '__main__':
     _, dataloader_train, _, dataloader_test = get_dataloaders_unsupervised(dpi=50,
                                                                            workers=2,
                                                                            image_folder=args.dataset,
-                                                                           augmentations=AddGaussianNoise(
+                                                                           shuffle_seed=args.shuffle_seed,
+                                                                           augmentations=None if args.gaussian_noise is None
+                                                                           else AddGaussianNoise(
                                                                                std=args.gaussian_noise))
 
     train_test_losses = train_as_autoencoder(model, dataloader_train, dataloader_test, mode='train',
