@@ -10,7 +10,7 @@ from torch import nn
 from dataset import get_dataloaders_supervised
 from iou import iou_multi_channel
 from train_segmentation import device
-from unet import Unet
+from unet import Unet, SkipType
 
 
 def plot_sample(model, index, dataloader, samples=None, mode='show', filter=None, name_prefix="sample_",
@@ -25,7 +25,7 @@ def plot_sample(model, index, dataloader, samples=None, mode='show', filter=None
 
     input_img, mask = samples[index]
 
-    result = model(input_img.to(device).squeeze()).cpu().detach().numpy()
+    result = model(input_img.to(device)).cpu().detach().numpy().squeeze()
 
     iou = None
     if calc_iou and filter is None:
@@ -56,11 +56,11 @@ def plot_sample(model, index, dataloader, samples=None, mode='show', filter=None
         print(f'saved: {save_path}')
 
 
-def plot_first_ten(model, dataloader, mode, name_prefix="sample_", device='cpu', calc_iou=True):
+def plot_first_ten(model, dataloader, mode, name_prefix="sample_", device='cpu', calc_iou=True, threshold=None):
     samples = list(itertools.islice((iter(dataloader)), 10))
 
     for i in range(10):
-        plot_sample(model, i, dataloader, mode=mode, name_prefix=name_prefix, samples=samples, device=device, calc_iou=calc_iou)
+        plot_sample(model, i, dataloader, mode=mode, name_prefix=name_prefix, samples=samples, device=device, calc_iou=calc_iou, filter=threshold)
 
 
 # matplotlib.use('module://backend_interagg')
@@ -69,13 +69,13 @@ if __name__ == '__main__':
     parser.add_argument("--device", type=str, default='cuda')
     parser.add_argument("--test", type=bool, default=False)
     parser.add_argument("--mode", type=str, default='show')
-    parser.add_argument("--model", type=str, default='learned_models/with_transfer_projs/200epochs_gauss_05_1e-4.pt')
+    parser.add_argument("--model", type=str, default='learned_models/transfer/8_16_32_64_200epochs_1e-4_invert_no_skip.pt')
     parser.add_argument("--save_name", type=str, default='')
     parser.add_argument("--root", type=str, default='blueprints')
 
     args = parser.parse_args()
 
-    model = Unet(layers=[8, 16, 32, 64, 128], output_channels=11).to(args.device)
+    model = Unet(layers=[8, 16, 32, 64], output_channels=11, skip=SkipType.NO_SKIP).to(args.device)
     model.load_state_dict(torch.load(args.model, map_location=args.device))
 
     _, dataloader_train, _, dataloader_test = get_dataloaders_supervised(root=args.root, mask_folder='mask_cutout.zip', image_folder='projs_cutout')

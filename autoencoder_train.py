@@ -11,11 +11,19 @@ from dataset import get_dataloaders_unsupervised
 from train_segmentation import device
 from unet import Unet, SkipType
 
+import wandb
+
 
 def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=None, device=device, lr=1e-3,
-                         invert=False):
+                         invert=False, plot_each=500):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
+
+    wandb.init(project='diplom_autoencoders', entity='ars860')
+    config = wandb.config
+    config.learning_rate = lr
+    config.epochs = num_epochs
+    config.invert = invert
 
     model = model.to(device)
     if mode == 'train':
@@ -49,23 +57,32 @@ def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=Non
                 optimizer.step()
 
             train_losses[i] = loss.item()
-            if i % 10 == 0 or i == len(data_loader) - 1:
-                print('Epoch:{}/{}, Step:{}/{}, Loss:{:.4f}'.format(epoch + 1, num_epochs, i, len(data_loader),
-                                                                    np.true_divide(train_losses.sum(),
-                                                                                   (train_losses != 0).sum())))
+            # if (i + 1) % 10 == 0 or i == len(data_loader) - 1:
+            #     print('Epoch:{}/{}, Step:{}/{}, Loss:{:.4f}'.format(epoch + 1, num_epochs, i + 1, len(data_loader),
+            #                                                         train_losses / (i + 1)))
 
-        test_losses = np.zeros(len(test_loader))
-        with torch.no_grad():
-            for i, img in enumerate(test_loader):
-                if isinstance(img, list):
-                    img, augmented = img
-                else:
-                    augmented = img
+            if plot_each is not None and (i + 1) % plot_each == 0 or i == len(data_loader) - 1:
+                test_losses = np.zeros(len(test_loader))
+                with torch.no_grad():
+                    for j, img in enumerate(test_loader):
+                        if isinstance(img, list):
+                            img, augmented = img
+                        else:
+                            augmented = img
 
-                img, augmented = img.to(device), augmented.to(device)
-                test_losses[i] = criterion(model(img), img if not invert else 1. - img)
+                        img, augmented = img.to(device), augmented.to(device)
+                        test_losses[j] = criterion(model(img), img if not invert else 1. - img)
 
-        outputs.append([np.mean(train_losses), np.mean(test_losses)])
+                wandb.log({"train_loss": np.true_divide(train_losses.sum(), (train_losses != 0).sum()),
+                           "test_loss": np.mean(test_losses)})
+                outputs.append([np.true_divide(train_losses.sum(), (train_losses != 0).sum()), np.mean(test_losses)])
+
+                print('Epoch:{}/{}, Step:{}/{}, TrainLoss:{:.4f}, TestLoss:{}'.format(epoch + 1, num_epochs, i + 1,
+                                                                                      len(data_loader),
+                                                                                      np.true_divide(
+                                                                                          train_losses.sum(),
+                                                                                          (train_losses != 0).sum()),
+                                                                                      np.mean(test_losses)))
 
     return np.vstack(outputs)
 
@@ -73,7 +90,7 @@ def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=Non
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cuda:2')
-    parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--gaussian_noise', type=float, default=None)
     parser.add_argument('--save', type=str, default=None)
     parser.add_argument('--epochs', type=int, default=10)

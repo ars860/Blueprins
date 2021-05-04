@@ -11,6 +11,8 @@ from unet import Unet, SkipType
 
 import os
 
+import wandb
+
 device = 'cuda'
 
 
@@ -25,6 +27,11 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
                           device=device, checkpoint=None):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
+
+    wandb.init(project='diplom_segmentation', entity='ars860')
+    config = wandb.config
+    config.learning_rate = lr
+    config.epochs = num_epochs
 
     model = model.to(device)
     if mode == 'train':
@@ -89,6 +96,8 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
                 test_losses[i] = criterion(model(img), mask)
 
         outputs.append([np.mean(train_losses), np.mean(test_losses)])
+        wandb.log({"train_loss": np.mean(train_losses),
+                   "test_loss": np.mean(test_losses)})
         # else:
         # losses_test = np.zeros(len(test_loader))
 
@@ -114,7 +123,9 @@ def train_segmentation(args):
     if args.masks is not None:
         masks = args.masks
 
-    dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised(root=args.root, image_folder=imgs, mask_folder=masks)
+    dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised(root=args.root,
+                                                                                                image_folder=imgs,
+                                                                                                mask_folder=masks)
 
     save_dir, _ = os.path.split(args.save)
     if args.checkpoint != -1:
@@ -127,7 +138,8 @@ def train_segmentation(args):
         if args.checkpoint != -1 and e % args.checkpoint == 0:
             torch.save(m.state_dict(), Path() / 'checkpoints' / f'{args.save}_{e}epoch.pt')
 
-    losses = train_as_segmantation(model, dataloader_train, dataloader_test, device=args.device, num_epochs=args.epochs, lr=args.lr, checkpoint=checkpoint)
+    losses = train_as_segmantation(model, dataloader_train, dataloader_test, device=args.device, num_epochs=args.epochs,
+                                   lr=args.lr, checkpoint=checkpoint)
 
     # if args.save is not None:
     np.savetxt(Path() / "logs" / f'{args.save}.out', losses)
