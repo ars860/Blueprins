@@ -56,10 +56,10 @@ def plot_sample(model, index, dataloader, samples=None, mode='show', filter=None
         print(f'saved: {save_path}')
 
 
-def plot_first_ten(model, dataloader, mode, name_prefix="sample_", device='cpu', calc_iou=True, threshold=None):
-    samples = list(itertools.islice((iter(dataloader)), 10))
+def plot_first_n(model, dataloader, n, mode, name_prefix="sample_", device='cpu', calc_iou=True, threshold=None):
+    samples = list(itertools.islice((iter(dataloader)), n))
 
-    for i in range(10):
+    for i in range(n):
         plot_sample(model, i, dataloader, mode=mode, name_prefix=name_prefix, samples=samples, device=device, calc_iou=calc_iou, filter=threshold)
 
 

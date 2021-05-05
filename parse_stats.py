@@ -9,7 +9,7 @@ from statistics import mean
 import numpy as np
 
 
-def parse_stats_double_number(file_name, take=None):
+def parse_stats_double_number(file_name, take=None, labels=None):
     with open(file_name) as file:
         lines = file.readlines()
 
@@ -28,7 +28,7 @@ def parse_stats_double_number(file_name, take=None):
 
         points = np.vstack(points)
         _, name = path.split(file_name)
-        plt.plot(range(len(points)), points, label=[f'{name}: train', f'{name}: test'])
+        plt.plot(range(len(points)), points, label=[f'{name}: train', f'{name}: test'] if labels is None else labels)
         # l1.set_label(f'{file_name}: train')
         # l2.set_label(f'{file_name}: train')
         # plt.legend([l1, l2], [f'{file_name}: train', f'{file_name}: train'])
@@ -36,14 +36,14 @@ def parse_stats_double_number(file_name, take=None):
         # plt.show()
 
 
-def parse_stats_and_plot(file_name, take=None):
+def parse_stats_and_plot(file_name, take=None, labels=None):
     numbers_regex = r'[\d.\-e ]+'
 
     with open(file_name) as file:
         line = file.readline()
 
         if re.match(numbers_regex, line) is not None:
-            parse_stats_double_number(file_name, take)
+            parse_stats_double_number(file_name, take, labels)
         else:
             parse_stats_and_plot_my_format(file_name, take)
 
@@ -104,6 +104,26 @@ def plot_like(path, like, take, second_path=None, titles=None):
         plt.show()
 
 
+def plot_like_f(path, like_f, second_path, titles):
+    if titles is None:
+        titles = []
+
+    file_names = (Path() / path).glob('*')
+    file_names = list(filter(lambda file_name: like_f(str(file_name)) and '.out' in str(file_name), file_names))
+
+    for i, fn in enumerate(file_names):
+        plt.figure(figsize=[10, 10])
+        if second_path is not None:
+            parse_stats_and_plot(Path() / second_path, args.take)
+
+        # plt.figure(figsize=[20,20])
+        parse_stats_and_plot(fn)
+
+        plt.title(titles[i] if i < len(titles) else '')
+        plt.legend()
+        plt.show()
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--path", type=str, default='stats.txt')
@@ -114,8 +134,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     titles = None
-    # titles = ['Autoencoder', 'Autoencoder with gaussian noise']
-    # titles = []
+    # titles = ['Autoencoder', 'Autoencoder invert', 'Autoencoder no_skip invert', 'Autoencoder zero_skip invert', 'Autoencoder no_skip', 'Autoencoder zero_skip']
+    titles = ['Segmentation no transfer']
 
     if args.like is not None:
         plot_like(args.path, args.like, args.take, second_path=args.second_path, titles=titles)
