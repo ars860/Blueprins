@@ -114,7 +114,8 @@ def train_segmentation(args):
         config.no_skip = args.no_skip
         config.transfer = args.transfer
         config.dropout = args.dropout
-        config.augment = args.augment
+        config.cutout_cnt = args.cutout_cnt
+        config.cutout_p = args.cutout_p
 
         if args.run_name is not None:
             wandb.run.name = args.run_name
@@ -139,9 +140,9 @@ def train_segmentation(args):
     if args.masks is not None:
         masks = args.masks
 
-    transforms = A.Compose([ToTensorV2()])
-    if args.augment is not None:
-        transforms = A.Compose([A.VerticalFlip(), A.HorizontalFlip(), A.Cutout(num_holes=args.augment), ToTensorV2()])
+    transforms = A.Compose([A.VerticalFlip(), A.HorizontalFlip(), ToTensorV2()])
+    if args.cutout_cnt != 0:
+        transforms = A.Compose([A.VerticalFlip(), A.HorizontalFlip(), A.Cutout(num_holes=args.cutout_cnt, p=args.cutout_p), ToTensorV2()])
 
     dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised(root=args.root,
                                                                                                 image_folder=imgs,
@@ -189,7 +190,8 @@ if __name__ == '__main__':
     parser.add_argument('--no_skip', action='store_true')
     parser.add_argument('--dropout', type=float, default=0)
     parser.add_argument('--run_name', type=str, default=None)
-    parser.add_argument('--augment', type=int, default=0)
+    parser.add_argument('--cutout_cnt', type=int, default=0)
+    parser.add_argument('--cutout_p', type=float, default=0.5)
     parser.add_argument('--no_wandb', action='store_true')
 
     parser.add_argument('--layers', type=int, nargs='+', default=[8, 16, 32, 64, 128])
