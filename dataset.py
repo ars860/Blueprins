@@ -104,9 +104,12 @@ class BlueprintsSupervisedDataset(Dataset):
             if self.transforms and self.mode == 'train':
                 # image = self.transforms(image)
                 # mask = self.transforms(mask)
-                masks = [m for m in mask]
-                augmented = self.transforms(image=image/255, masks=masks)
-                image, mask = augmented['image'].float(), torch.FloatTensor(np.stack(augmented['masks']))
+
+                augmented = self.transforms(image=image/255, masks=[m for m in mask])
+            else:
+                augmented = ToTensorV2()(image=image, masks=[m for m in mask])
+
+            image, mask = augmented['image'].float(), torch.FloatTensor(np.stack(augmented['masks']))
 
             return image, mask
 
