@@ -5,6 +5,7 @@ from functools import reduce
 from pathlib import Path
 from typing import Any, Callable
 
+import albumentations as A
 import matplotlib.pyplot as plt
 import numpy
 import numpy as np
@@ -25,12 +26,14 @@ class BlueprintsSupervisedDataset(Dataset):
                  root: str,
                  image_folder: str,
                  mask_folder: str,
-                 transforms: [Callable] = ToTensorV2(),
+                 transforms: [Callable] = A.Compose([A.SmallestMaxSize(256), ToTensorV2()]),
                  seed: int = None,
                  fraction: float = 0.9,
                  mode: str = None,
                  zip_archive=True,
                  filter_test=None) -> None:
+        if transforms is None:
+            transforms = A.Compose([A.SmallestMaxSize(256), ToTensorV2()])
 
         self.root = root
         self.transforms = transforms
@@ -107,7 +110,7 @@ class BlueprintsSupervisedDataset(Dataset):
 
                 augmented = self.transforms(image=image/255, masks=[m for m in mask])
             else:
-                augmented = ToTensorV2()(image=image, masks=[m for m in mask])
+                augmented = A.Compose([A.SmallestMaxSize(256), ToTensorV2()])(image=image, masks=[m for m in mask])
 
             image, mask = augmented['image'].float(), torch.FloatTensor(np.stack(augmented['masks']))
 

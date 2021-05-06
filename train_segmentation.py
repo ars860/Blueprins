@@ -140,9 +140,9 @@ def train_segmentation(args):
     if args.masks is not None:
         masks = args.masks
 
-    transforms = A.Compose([A.VerticalFlip(), A.HorizontalFlip(), ToTensorV2()])
+    transforms = A.Compose([A.VerticalFlip(), A.HorizontalFlip(), A.SmallestMaxSize(256), ToTensorV2()])
     if args.cutout_cnt != 0:
-        transforms = A.Compose([A.VerticalFlip(), A.HorizontalFlip(), A.Cutout(num_holes=args.cutout_cnt, p=args.cutout_p), ToTensorV2()])
+        transforms = A.Compose([A.VerticalFlip(), A.HorizontalFlip(), A.SmallestMaxSize(256), A.Cutout(num_holes=args.cutout_cnt, p=args.cutout_p), ToTensorV2()])
 
     dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised(root=args.root,
                                                                                                 image_folder=imgs,
