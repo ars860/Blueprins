@@ -21,7 +21,7 @@ class UpBlock(nn.Module):
         self.conv1 = nn.Conv2d(ch_out * 2 if skip == SkipType.NO_SKIP else ch_out * 3, ch_out, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(ch_out, ch_out, kernel_size=3, padding=1)
 
-        if dropout is not None:
+        if dropout is not None and dropout != 0:
             self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, u=None, padding=None):

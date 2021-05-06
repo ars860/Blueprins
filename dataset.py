@@ -6,9 +6,12 @@ from pathlib import Path
 from typing import Any, Callable
 
 import matplotlib.pyplot as plt
+import numpy
 import numpy as np
+import torch
 import torchvision.transforms as tr
 from PIL import Image
+from albumentations.pytorch import ToTensorV2
 from pdf2image import convert_from_path
 from torch.utils.data import Dataset, DataLoader
 
@@ -22,7 +25,7 @@ class BlueprintsSupervisedDataset(Dataset):
                  root: str,
                  image_folder: str,
                  mask_folder: str,
-                 transforms: [Callable] = tr.Compose([tr.ToTensor(), tr.Resize(256)]),
+                 transforms: [Callable] = ToTensorV2(),
                  seed: int = None,
                  fraction: float = 0.9,
                  mode: str = None,
@@ -84,7 +87,7 @@ class BlueprintsSupervisedDataset(Dataset):
         image_path = self.image_names[index]
         mask_path = self.mask_names[index]
         with open(image_path, "rb") as image_file:
-            image = Image.open(image_file)  # 255 - np.array(Image.open(image_file))
+            image = np.array(Image.open(image_file))  # 255 - np.array(Image.open(image_file))
 
             if self.zip_archive:
                 with np.load(self.mask_folder_path) as archive:
@@ -93,15 +96,18 @@ class BlueprintsSupervisedDataset(Dataset):
                 with open(mask_path, "rb") as mask_file:
                     mask = np.load(mask_file)
 
-            mask = np.moveaxis(mask, 0, 2)
+            # mask = np.moveaxis(mask, 0, 2)
             # mask = np.amax(mask, axis=2)
             mask[mask != 0] = 1
 
             if self.transforms:
-                image = self.transforms(image)
-                mask = self.transforms(mask)
+                # image = self.transforms(image)
+                # mask = self.transforms(mask)
+                masks = [m for m in mask]
+                augmented = self.transforms(image=image/255, masks=masks)
+                image, mask = augmented['image'].float(), torch.FloatTensor(np.stack(augmented['masks']))
 
-            return image, mask.squeeze()
+            return image, mask
 
 
 def get_dataloaders_supervised(root='blueprints', image_folder='projs', mask_folder='mask.zip',
@@ -109,26 +115,27 @@ def get_dataloaders_supervised(root='blueprints', image_folder='projs', mask_fol
                                workers=2,
                                fraction=0.9,
                                filter_test=False,
-                               shuffle_seed=None):
+                               shuffle_seed=None,
+                               transforms=ToTensorV2()):
     glob = list(map(os.path.basename, list((Path() / root).glob('*'))))
 
     if 'train' in glob and 'test' in glob:
         dataset_train = BlueprintsSupervisedDataset(str(Path() / root / 'train'), image_folder, mask_folder,
-                                                    mode='train', fraction=None)
+                                                    mode='train', fraction=None, transforms=transforms)
         dataset_test = BlueprintsSupervisedDataset(str(Path() / root / 'test'), image_folder, mask_folder, mode='test',
-                                                   fraction=None)
+                                                   fraction=None, transforms=transforms)
 
         return dataset_train, DataLoader(dataset_train, batch_size=batch_size, num_workers=workers), \
                dataset_test, DataLoader(dataset_test, batch_size=batch_size, num_workers=workers)
 
     dataset_train = BlueprintsSupervisedDataset(root, image_folder, mask_folder, mode='train', fraction=fraction,
-                                                seed=shuffle_seed)
+                                                seed=shuffle_seed, transforms=transforms)
 
     if fraction == 1.0:
         return dataset_train, DataLoader(dataset_train, batch_size=batch_size, num_workers=workers)
 
     dataset_test = BlueprintsSupervisedDataset(root, image_folder, mask_folder, mode='test', fraction=fraction,
-                                               filter_test=filter_cutout if filter_test else None, seed=shuffle_seed)
+                                               filter_test=filter_cutout if filter_test else None, seed=shuffle_seed, transforms=transforms)
 
     return dataset_train, DataLoader(dataset_train, batch_size=batch_size, num_workers=workers), \
            dataset_test, DataLoader(dataset_test, batch_size=batch_size, num_workers=workers)

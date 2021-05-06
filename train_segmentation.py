@@ -4,6 +4,8 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn.functional as F
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 from dataset import get_dataloaders_unsupervised, get_dataloaders_supervised
 from losses import focal_loss, dice_loss
@@ -24,14 +26,9 @@ def transfer_knowledge(model, knowledge_path, device=device):
 
 
 def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epochs=5, lr=1e-4, dice=None, focal=False,
-                          device=device, checkpoint=None):
+                          device=device, checkpoint=None, no_wandb=False):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
-
-    wandb.init(project='diplom_segmentation', entity='ars860')
-    config = wandb.config
-    config.learning_rate = lr
-    config.epochs = num_epochs
 
     model = model.to(device)
     if mode == 'train':
@@ -39,7 +36,8 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
     else:
         model.eval()
 
-    wandb.watch(model, log_freq=100)
+    if not no_wandb:
+        wandb.watch(model, log_freq=100)
 
     def criterion(x, mask):
         # x = torch.sigmoid(x)
@@ -98,8 +96,9 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
                 test_losses[i] = criterion(model(img), mask)
 
         outputs.append([np.mean(train_losses), np.mean(test_losses)])
-        wandb.log({"train_loss": np.mean(train_losses),
-                   "test_loss": np.mean(test_losses)})
+        if not no_wandb:
+            wandb.log({"train_loss": np.mean(train_losses),
+                       "test_loss": np.mean(test_losses)})
         # else:
         # losses_test = np.zeros(len(test_loader))
 
@@ -107,10 +106,25 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
 
 
 def train_segmentation(args):
+    if not args.no_wandb:
+        wandb.init(project='diplom_segmentation', entity='ars860')
+        config = wandb.config
+        config.lr = args.lr
+        config.epochs = args.epochs
+        config.no_skip = args.no_skip
+        config.transfer = args.transfer
+        config.dropout = args.dropout
+        config.augment = args.augment
+
+        if args.run_name is not None:
+            wandb.run.name = args.run_name
+            wandb.run.save()
+
     skip_type = SkipType.SKIP if not args.no_skip else SkipType.NO_SKIP
+
     model = Unet(layers=args.layers, output_channels=11, skip=skip_type, dropout=args.dropout)
 
-    if args.transfer is not None:
+    if args.transfer != 0:
         transfer_knowledge(model, Path() / 'learned_models' / args.transfer, device=args.device)
 
     if args.load is not None:
@@ -125,9 +139,14 @@ def train_segmentation(args):
     if args.masks is not None:
         masks = args.masks
 
+    transforms = A.Compose([ToTensorV2()])
+    if args.augment is not None:
+        transforms = A.Compose([A.VerticalFlip(), A.HorizontalFlip(), A.Cutout(num_holes=args.augment), ToTensorV2()])
+
     dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised(root=args.root,
                                                                                                 image_folder=imgs,
-                                                                                                mask_folder=masks)
+                                                                                                mask_folder=masks,
+                                                                                                transforms=transforms)
 
     save_dir, _ = os.path.split(args.save)
     if args.checkpoint != -1:
@@ -141,7 +160,7 @@ def train_segmentation(args):
             torch.save(m.state_dict(), Path() / 'checkpoints' / f'{args.save}_{e}epoch.pt')
 
     losses = train_as_segmantation(model, dataloader_train, dataloader_test, device=args.device, num_epochs=args.epochs,
-                                   lr=args.lr, checkpoint=checkpoint)
+                                   lr=args.lr, checkpoint=checkpoint, no_wandb=args.no_wandb)
 
     # if args.save is not None:
     np.savetxt(Path() / "logs" / f'{args.save}.out', losses)
@@ -162,13 +181,16 @@ if __name__ == '__main__':
     # parser.add_argument('--resize', type=int, default=None)
     parser.add_argument('--transfer', type=str, default=None)
     parser.add_argument('--checkpoint', type=int, default=-1)
-    parser.add_argument('--cutout', action='store_true')
+    # parser.add_argument('--cutout', action='store_true')
     parser.add_argument('--projs', type=str, default=None)
     parser.add_argument('--masks', type=str, default=None)
     parser.add_argument('--root', type=str, default=str(Path() / 'blueprints'))
     parser.add_argument('--dont_save_model', action='store_true')
     parser.add_argument('--no_skip', action='store_true')
-    parser.add_argument('--dropout', type=float, default=None)
+    parser.add_argument('--dropout', type=float, default=0)
+    parser.add_argument('--run_name', type=str, default=None)
+    parser.add_argument('--augment', type=int, default=0)
+    parser.add_argument('--no_wandb', action='store_true')
 
     parser.add_argument('--layers', type=int, nargs='+', default=[8, 16, 32, 64, 128])
 
