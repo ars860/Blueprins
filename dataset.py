@@ -36,6 +36,7 @@ class BlueprintsSupervisedDataset(Dataset):
         self.transforms = transforms
         self.zip_archive = zip_archive
         self.filter_test = filter_test
+        self.mode = mode
 
         self.image_folder_path = Path(self.root) / image_folder
         self.mask_folder_path = Path(self.root) / mask_folder
@@ -100,7 +101,7 @@ class BlueprintsSupervisedDataset(Dataset):
             # mask = np.amax(mask, axis=2)
             mask[mask != 0] = 1
 
-            if self.transforms:
+            if self.transforms and self.mode == 'train':
                 # image = self.transforms(image)
                 # mask = self.transforms(mask)
                 masks = [m for m in mask]
