@@ -105,6 +105,7 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
     return np.array(outputs)
 
 
+# previously vh = True
 def train_segmentation(args):
     if not args.no_wandb:
         wandb.init(project='diplom_segmentation', entity='ars860')
@@ -116,6 +117,7 @@ def train_segmentation(args):
         config.dropout = args.dropout
         config.cutout_cnt = args.cutout_cnt
         config.cutout_p = args.cutout_p
+        config.vh = args.vh
 
         if args.run_name is not None:
             wandb.run.name = args.run_name
@@ -140,9 +142,18 @@ def train_segmentation(args):
     if args.masks is not None:
         masks = args.masks
 
-    transforms = A.Compose([A.VerticalFlip(), A.HorizontalFlip(), A.SmallestMaxSize(256), ToTensorV2()])
-    if args.cutout_cnt != 0:
-        transforms = A.Compose([A.VerticalFlip(), A.HorizontalFlip(), A.SmallestMaxSize(256), A.Cutout(num_holes=args.cutout_cnt, p=args.cutout_p), ToTensorV2()])
+    transforms = []
+    if args.vh:
+        transforms = [A.VerticalFlip(), A.HorizontalFlip()]
+    transforms.append(A.SmallestMaxSize(256))
+    if args.cutout_cnt != 0 and args.cutout_p != 0:
+        transforms.append(A.Cutout(num_holes=args.cutout_cnt, p=args.cutout_p))
+    transforms.append(ToTensorV2())
+    transforms = A.Compose(transforms)
+
+    # transforms = A.Compose([A.VerticalFlip(), A.HorizontalFlip(), A.SmallestMaxSize(256), ToTensorV2()])
+    # if args.cutout_cnt != 0:
+    #     transforms = A.Compose([A.VerticalFlip(), A.HorizontalFlip(), A.SmallestMaxSize(256), A.Cutout(num_holes=args.cutout_cnt, p=args.cutout_p), ToTensorV2()])
 
     dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised(root=args.root,
                                                                                                 image_folder=imgs,
@@ -193,6 +204,7 @@ if __name__ == '__main__':
     parser.add_argument('--cutout_cnt', type=int, default=0)
     parser.add_argument('--cutout_p', type=float, default=0.5)
     parser.add_argument('--no_wandb', action='store_true')
+    parser.add_argument('--vh', action='store_true')
 
     parser.add_argument('--layers', type=int, nargs='+', default=[8, 16, 32, 64, 128])
 
