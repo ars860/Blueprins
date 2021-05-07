@@ -110,7 +110,7 @@ class BlueprintsSupervisedDataset(Dataset):
 
                 augmented = self.transforms(image=image/255, masks=[m for m in mask])
             else:
-                augmented = A.Compose([A.SmallestMaxSize(256), ToTensorV2()])(image=image, masks=[m for m in mask])
+                augmented = A.Compose([A.SmallestMaxSize(256), ToTensorV2()])(image=image/255, masks=[m for m in mask])
 
             image, mask = augmented['image'].float(), torch.FloatTensor(np.stack(augmented['masks']))
 
