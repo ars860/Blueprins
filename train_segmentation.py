@@ -114,6 +114,7 @@ def train_segmentation(args):
         config.epochs = args.epochs
         config.no_skip = args.no_skip
         config.transfer = args.transfer
+        config.load = args.load
         config.dropout = args.dropout
         config.cutout_cnt = args.cutout_cnt
         config.cutout_p = args.cutout_p
@@ -127,7 +128,7 @@ def train_segmentation(args):
 
     model = Unet(layers=args.layers, output_channels=11, skip=skip_type, dropout=args.dropout)
 
-    if args.transfer != 0:
+    if args.transfer is not None:
         transfer_knowledge(model, Path() / 'learned_models' / args.transfer, device=args.device)
 
     if args.load is not None:
