@@ -257,8 +257,6 @@ if __name__ == '__main__':
     if args.skip_type is not None:
         if args.skip_type == 'no_skip':
             args.no_skip = True
-        else:
-            args.no_skip = False
 
     if args.transfer == '':
         args.transfer = None
@@ -266,5 +264,7 @@ if __name__ == '__main__':
     if args.transfer is not None:
         if 'no_skip' in args.transfer:
             args.no_skip = True
+        else:
+            args.no_skip = False
 
     train_segmentation(args)
