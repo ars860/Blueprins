@@ -257,6 +257,8 @@ if __name__ == '__main__':
     if args.skip_type is not None:
         if args.skip_type == 'no_skip':
             args.no_skip = True
+        else:
+            args.no_skip = False
 
     if args.transfer == '':
         args.transfer = None

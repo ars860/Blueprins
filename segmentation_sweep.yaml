@@ -3,7 +3,6 @@ command:
   - ${env}
   - python3.7
   - ${program}
-  - "--load_from_wandb"
   - "--device"
   - "cuda:1"
   - ${args}
@@ -18,12 +17,12 @@ parameters:
     distribution: int_uniform
   transfer:
     values:
-      - "1e-4_50epochs_invert_no_skip"
-      - "1e-4_50epochs_invert"
-      - "1e-4_50epochs_no_skip"
-      - "1e-4_50epochs"
-      - "1e-4_50epochs_invert_zero_skip"
-      - "1e-4_50epochs_zero_skip"
+      - "03_05/autoencoder/1e-4_50epochs_invert_no_skip.pt"
+      - "03_05/autoencoder/1e-4_50epochs_invert.pt"
+      - "03_05/autoencoder/1e-4_50epochs_no_skip.pt"
+      - "03_05/autoencoder/1e-4_50epochs.pt"
+      - "03_05/autoencoder/1e-4_50epochs_invert_zero_skip.pt"
+      - "03_05/autoencoder/1e-4_50epochs_zero_skip.pt"
       - ""
     distribution: categorical
   cutout_p:
