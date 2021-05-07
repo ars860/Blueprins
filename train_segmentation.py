@@ -25,6 +25,17 @@ def transfer_knowledge(model, knowledge_path, device=device):
     model.load_state_dict(state_dict, strict=False)
 
 
+def transfer_knowledge_from_wandb(model, knowledge_path, run, device=device):
+    artifact = run.use_artifact(knowledge_path, type='model')
+    artifact_dir = artifact.download()
+
+    state_dict = torch.load(artifact_dir, map_location=device)
+
+    del state_dict['final.weight']
+    del state_dict['final.bias']
+    model.load_state_dict(state_dict, strict=False)
+
+
 def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epochs=5, lr=1e-4, dice=None, focal=False,
                           device=device, checkpoint=None, no_wandb=False):
     if not (mode == 'train' or mode == 'test'):
@@ -107,8 +118,9 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
 
 # previously vh = True
 def train_segmentation(args):
+    run = None
     if not args.no_wandb:
-        wandb.init(project='diplom_segmentation', entity='ars860')
+        run = wandb.init(project='diplom_segmentation', entity='ars860')
         config = wandb.config
         config.lr = args.lr
         config.epochs = args.epochs
@@ -172,6 +184,11 @@ def train_segmentation(args):
         if args.checkpoint != -1 and e % args.checkpoint == 0:
             torch.save(m.state_dict(), Path() / 'checkpoints' / f'{args.save}_{e}epoch.pt')
 
+            if not args.no_wandb:
+                artifact = wandb.Artifact(f'checkpoint_{e}', type='model')
+                artifact.add_file(str(Path() / 'checkpoints' / f'{args.save}_{e}epoch.pt'))
+                run.log_artifact(artifact)
+
     losses = train_as_segmantation(model, dataloader_train, dataloader_test, device=args.device, num_epochs=args.epochs,
                                    lr=args.lr, checkpoint=checkpoint, no_wandb=args.no_wandb)
 
@@ -179,6 +196,11 @@ def train_segmentation(args):
     np.savetxt(Path() / "logs" / f'{args.save}.out', losses)
     if not args.dont_save_model:
         torch.save(model.state_dict(), Path() / 'learned_models' / f'{args.save}.pt')
+
+        if not args.no_wandb:
+            artifact = wandb.Artifact('model', type='model')
+            artifact.add_file(str(Path() / 'learned_models' / f'{args.save}.pt'))
+            run.log_artifact(artifact)
 
 
 # if __name__ == '__main__':
@@ -206,6 +228,7 @@ if __name__ == '__main__':
     parser.add_argument('--cutout_p', type=float, default=0.5)
     parser.add_argument('--no_wandb', action='store_true')
     parser.add_argument('--vh', action='store_true')
+    parser.add_argument('--load_from_wandb', action='store_true')
 
     parser.add_argument('--layers', type=int, nargs='+', default=[8, 16, 32, 64, 128])
 

@@ -19,12 +19,6 @@ def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=Non
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
 
-    wandb.init(project='diplom_autoencoders', entity='ars860')
-    config = wandb.config
-    config.learning_rate = lr
-    config.epochs = num_epochs
-    config.invert = invert
-
     model = model.to(device)
     if mode == 'train':
         model.train()
@@ -101,6 +95,8 @@ if __name__ == '__main__':
     parser.add_argument('--zero_skip', action='store_true')
     parser.add_argument('--invert', action='store_true')
     parser.add_argument('--shuffle_seed', type=int, default=None)
+    parser.add_argument('--run_name', type=str, default=None)
+    parser.add_argument('--no_wandb', action='store_true')
 
     parser.add_argument('--layers', type=int, nargs='+', default=[8, 16, 32, 64, 128])
 
@@ -115,7 +111,26 @@ if __name__ == '__main__':
     if args.zero_skip:
         skip_type = SkipType.ZERO_SKIP
 
+    run = None
+    if not args.no_wandb:
+        run = wandb.init(project='diplom_autoencoders', entity='ars860')
+        config = wandb.config
+        config.learning_rate = args.lr
+        config.epochs = args.epochs
+        config.invert = args.invert
+        config.no_skip = args.no_skip
+        config.zero_skip = args.zero_skip
+        config.layers = args.layers
+
+        if args.run_name is not None:
+            wandb.run.name = args.run_name
+            wandb.run.save()
+
     model = Unet(layers=args.layers, output_channels=1, skip=skip_type)
+
+    if not args.no_wandb:
+        wandb.watch(model, log_freq=100)
+
     _, dataloader_train, _, dataloader_test = get_dataloaders_unsupervised(dpi=50,
                                                                            workers=2,
                                                                            image_folder=args.dataset,
@@ -135,3 +150,8 @@ if __name__ == '__main__':
 
         np.savetxt(Path() / 'logs' / f'{args.save}.out', train_test_losses)
         torch.save(model.state_dict(), Path() / 'learned_models' / f'{args.save}.pt')
+
+        if not args.no_wandb:
+            artifact = wandb.Artifact('model', type='model')
+            artifact.add_file(str(Path() / 'learned_models' / f'{args.save}.pt'))
+            run.log_artifact(artifact)
