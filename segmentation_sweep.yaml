@@ -1,9 +1,11 @@
 program: train_segmentation.py
 command:
   - ${env}
-  - ${interpreter}
+  - python3.7
   - ${program}
   - "--load_from_wandb"
+  - "--device"
+  - "cuda:1"
   - ${args}
 method: bayes
 metric:

@@ -122,8 +122,8 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
 
 # previously vh = True
 def train_segmentation(args):
-    if args.run_name is None:
-        args.run_name = f'{args.lr}_{args.epochs}epochs{f"_transfer_{args.transfer}" if args.transfer is not None else ""}{"_no_skip" if args.no_skip else ""}'
+    # if args.run_name is None:
+    #     args.run_name = f'{args.lr}_{args.epochs}epochs{f"_transfer_{args.transfer}" if args.transfer is not None else ""}{"_no_skip" if args.no_skip else ""}'
 
     run = None
     if not args.no_wandb:
