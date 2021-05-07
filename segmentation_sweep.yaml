@@ -1,0 +1,53 @@
+program: train_segmentation.py
+command:
+  - ${env}
+  - ${interpreter}
+  - ${program}
+  - "--load_from_wandb"
+  - ${args}
+method: bayes
+metric:
+  goal: minimize
+  name: test_loss
+parameters:
+  cutout_cnt:
+    max: 400
+    min: 0
+    distribution: int_uniform
+  transfer:
+    values:
+      - "1e-4_50epochs_invert_no_skip"
+      - "1e-4_50epochs_invert"
+      - "1e-4_50epochs_no_skip"
+      - "1e-4_50epochs"
+      - "1e-4_50epochs_invert_zero_skip"
+      - "1e-4_50epochs_zero_skip"
+      - ""
+    distribution: categorical
+  cutout_p:
+    max: 1
+    min: 0
+    distribution: uniform
+  skip_type:
+    values:
+      - "skip"
+      - "no_skip"
+    distribution: categorical
+  vh_:
+    values:
+      - "true"
+      - "false"
+    distribution: categorical
+  lr:
+    max: 0.0002
+    min: 0.00005
+    distribution: uniform
+  epochs:
+    max: 400
+    min: 100
+    distribution: int_uniform
+  optimizer:
+    values:
+      - "adam"
+      - "sgd"
+    distribution: categorical

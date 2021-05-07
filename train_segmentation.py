@@ -1,4 +1,5 @@
 import argparse
+import time
 from pathlib import Path
 
 import numpy as np
@@ -28,8 +29,9 @@ def transfer_knowledge(model, knowledge_path, device=device):
 def transfer_knowledge_from_wandb(model, knowledge_path, run, device=device):
     artifact = run.use_artifact(knowledge_path, type='model')
     artifact_dir = artifact.download()
+    artifact_file = next(iter((Path() / artifact_dir).glob('*')))
 
-    state_dict = torch.load(artifact_dir, map_location=device)
+    state_dict = torch.load(artifact_file, map_location=device)
 
     del state_dict['final.weight']
     del state_dict['final.bias']
@@ -37,7 +39,7 @@ def transfer_knowledge_from_wandb(model, knowledge_path, run, device=device):
 
 
 def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epochs=5, lr=1e-4, dice=None, focal=False,
-                          device=device, checkpoint=None, no_wandb=False):
+                          device=device, checkpoint=None, no_wandb=False, optim='adam'):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
 
@@ -65,6 +67,8 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
 
     # criterion = dice_loss  # nn.BCEWithLogitsLoss()  # F.binary_cross_entropy_with_logits
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)  # torch.optim.SGD(model.parameters(), lr=lr)
+    if optim == 'sgd':
+        optimizer = torch.optim.SGD(model.parameters(), lr=lr)
     # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
 
     # length = len(dataloader)
@@ -118,6 +122,9 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
 
 # previously vh = True
 def train_segmentation(args):
+    if args.run_name is None:
+        args.run_name = f'{args.lr}_{args.epochs}epochs{f"_transfer_{args.transfer}" if args.transfer is not None else ""}{"_no_skip" if args.no_skip else ""}'
+
     run = None
     if not args.no_wandb:
         run = wandb.init(project='diplom_segmentation', entity='ars860')
@@ -131,6 +138,7 @@ def train_segmentation(args):
         config.cutout_cnt = args.cutout_cnt
         config.cutout_p = args.cutout_p
         config.vh = args.vh
+        config.optimizer = args.optimizer
 
         if args.run_name is not None:
             wandb.run.name = args.run_name
@@ -141,7 +149,10 @@ def train_segmentation(args):
     model = Unet(layers=args.layers, output_channels=11, skip=skip_type, dropout=args.dropout)
 
     if args.transfer is not None:
-        transfer_knowledge(model, Path() / 'learned_models' / args.transfer, device=args.device)
+        if args.load_from_wandb:
+            transfer_knowledge_from_wandb(model, f'ars860/diplom_autoencoders/{args.transfer}', run=run, device=args.device)
+        else:
+            transfer_knowledge(model, Path() / 'learned_models' / args.transfer, device=args.device)
 
     if args.load is not None:
         model.load_state_dict(torch.load(Path() / 'learned_models' / args.load, map_location=args.device))
@@ -173,34 +184,36 @@ def train_segmentation(args):
                                                                                                 mask_folder=masks,
                                                                                                 transforms=transforms)
 
-    save_dir, _ = os.path.split(args.save)
-    if args.checkpoint != -1:
-        (Path() / 'checkpoints' / save_dir).mkdir(parents=True, exist_ok=True)
-    (Path() / 'logs' / save_dir).mkdir(parents=True, exist_ok=True)
-    if not args.dont_save_model:
-        (Path() / 'learned_models' / save_dir).mkdir(parents=True, exist_ok=True)
+    if args.save is not None:
+        save_dir, _ = os.path.split(args.save)
+        if args.checkpoint != -1:
+            (Path() / 'checkpoints' / save_dir).mkdir(parents=True, exist_ok=True)
+        (Path() / 'logs' / save_dir).mkdir(parents=True, exist_ok=True)
+        if not args.dont_save_model:
+            (Path() / 'learned_models' / save_dir).mkdir(parents=True, exist_ok=True)
 
     def checkpoint(e, m):
-        if args.checkpoint != -1 and e % args.checkpoint == 0:
-            torch.save(m.state_dict(), Path() / 'checkpoints' / f'{args.save}_{e}epoch.pt')
+        if args.save is not None:
+            if args.checkpoint != -1 and e % args.checkpoint == 0:
+                torch.save(m.state_dict(), Path() / 'checkpoints' / f'{args.save}_{e}epoch.pt')
 
-            if not args.no_wandb:
-                artifact = wandb.Artifact(f'checkpoint_{e}', type='model')
-                artifact.add_file(str(Path() / 'checkpoints' / f'{args.save}_{e}epoch.pt'))
-                run.log_artifact(artifact)
+                if not args.no_wandb:
+                    artifact = wandb.Artifact(f'checkpoint_{e}', type='checkpoint')
+                    artifact.add_file(str(Path() / 'checkpoints' / f'{args.save}_{e}epoch.pt'))
+                    run.log_artifact(artifact)
 
     losses = train_as_segmantation(model, dataloader_train, dataloader_test, device=args.device, num_epochs=args.epochs,
-                                   lr=args.lr, checkpoint=checkpoint, no_wandb=args.no_wandb)
+                                   lr=args.lr, checkpoint=checkpoint, no_wandb=args.no_wandb, optim=args.optimizer)
 
-    # if args.save is not None:
-    np.savetxt(Path() / "logs" / f'{args.save}.out', losses)
-    if not args.dont_save_model:
-        torch.save(model.state_dict(), Path() / 'learned_models' / f'{args.save}.pt')
+    if args.save is not None:
+        np.savetxt(Path() / "logs" / f'{args.save}.out', losses)
+        if not args.dont_save_model:
+            torch.save(model.state_dict(), Path() / 'learned_models' / f'{args.save}.pt')
 
-        if not args.no_wandb:
-            artifact = wandb.Artifact('model', type='model')
-            artifact.add_file(str(Path() / 'learned_models' / f'{args.save}.pt'))
-            run.log_artifact(artifact)
+            if not args.no_wandb:
+                artifact = wandb.Artifact('model', type='model')
+                artifact.add_file(str(Path() / 'learned_models' / f'{args.save}.pt'))
+                run.log_artifact(artifact)
 
 
 # if __name__ == '__main__':
@@ -211,7 +224,7 @@ if __name__ == '__main__':
     parser.add_argument('--device', type=str, default='cuda')
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--lr', type=float, default=1e-4)
-    parser.add_argument('--save', type=str, default="save")
+    parser.add_argument('--save', type=str, default=None)
     parser.add_argument('--load', type=str, default=None)
     # parser.add_argument('--resize', type=int, default=None)
     parser.add_argument('--transfer', type=str, default=None)
@@ -225,13 +238,31 @@ if __name__ == '__main__':
     parser.add_argument('--dropout', type=float, default=0)
     parser.add_argument('--run_name', type=str, default=None)
     parser.add_argument('--cutout_cnt', type=int, default=0)
-    parser.add_argument('--cutout_p', type=float, default=0.5)
+    parser.add_argument('--cutout_p', type=float, default=0)
     parser.add_argument('--no_wandb', action='store_true')
     parser.add_argument('--vh', action='store_true')
     parser.add_argument('--load_from_wandb', action='store_true')
+    parser.add_argument('--optimizer', type=str, default='adam')
 
     parser.add_argument('--layers', type=int, nargs='+', default=[8, 16, 32, 64, 128])
 
+    parser.add_argument('--vh_', type=lambda s: s == 'true', default=None)
+    parser.add_argument('--skip_type', type=str, default='skip')
+
     args = parser.parse_args()
+
+    if args.vh_ is not None:
+        args.vh = args.vh_
+
+    if args.skip_type is not None:
+        if args.skip_type == 'no_skip':
+            args.no_skip = True
+
+    if args.transfer == '':
+        args.transfer = None
+
+    if args.transfer is not None:
+        if 'no_skip' in args.transfer:
+            args.no_skip = True
 
     train_segmentation(args)
