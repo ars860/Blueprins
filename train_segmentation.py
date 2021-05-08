@@ -1,5 +1,6 @@
 import argparse
 import time
+from os.path import basename, splitext
 from pathlib import Path
 
 import numpy as np
@@ -150,7 +151,8 @@ def train_segmentation(args):
 
     if args.transfer is not None:
         if args.load_from_wandb:
-            transfer_knowledge_from_wandb(model, f'ars860/diplom_autoencoders/{args.transfer}', run=run, device=args.device)
+            transfer_knowledge_from_wandb(model, f'ars860/diplom_autoencoders/{args.transfer}', run=run,
+                                          device=args.device)
         else:
             transfer_knowledge(model, Path() / 'learned_models' / args.transfer, device=args.device)
 
@@ -210,10 +212,12 @@ def train_segmentation(args):
         if not args.dont_save_model:
             torch.save(model.state_dict(), Path() / 'learned_models' / f'{args.save}.pt')
 
-            if not args.no_wandb:
-                artifact = wandb.Artifact('model', type='model')
-                artifact.add_file(str(Path() / 'learned_models' / f'{args.save}.pt'))
-                run.log_artifact(artifact)
+    if not args.no_wandb:
+        artifact = wandb.Artifact('model', type='model')
+        with artifact.new_file('sweep_model.pt', mode='wb') as f:
+            torch.save(model.state_dict(), f)
+        # artifact.add_file(str(Path() / 'learned_models' / f'{args.save}.pt'))
+        run.log_artifact(artifact)
 
 
 # if __name__ == '__main__':
@@ -267,4 +271,10 @@ if __name__ == '__main__':
         else:
             args.no_skip = False
 
+    # if args.save is None:
+    #     args.save = f'sweep/{args.lr}_{args.epochs}epochs' \
+    #                 f'{f"_transfer_{splitext(basename(args.transfer))[0]}" if args.transfer is not None else ""}' \
+    #                 f'{"_no_skip" if args.no_skip and args.transfer is None else ""}'
+
+    # print(args.save)
     train_segmentation(args)
