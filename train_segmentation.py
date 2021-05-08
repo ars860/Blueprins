@@ -10,6 +10,7 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
 from dataset import get_dataloaders_unsupervised, get_dataloaders_supervised
+from iou import iou_multi_channel
 from losses import focal_loss, dice_loss
 from unet import Unet, SkipType
 
@@ -106,15 +107,23 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
             #     torch.save(model.state_dict(), Path() / 'checkpoints' / )
 
         test_losses = np.zeros(len(test_loader))
+        test_ious = np.zeros(len(test_loader))
         with torch.no_grad():
             for i, (img, mask) in enumerate(test_loader):
                 img, mask = img.to(device), mask.to(device)
-                test_losses[i] = criterion(model(img), mask)
+                processed = model(img)
+                test_losses[i] = criterion(processed, mask)
+                test_ious[i] = np.mean(iou_multi_channel(processed, mask))
 
-        outputs.append([np.mean(train_losses), np.mean(test_losses)])
+        train_losses, test_losses, test_ious = np.mean(train_losses), np.mean(test_losses), np.mean(test_ious)
+
+        print(train_losses, test_losses, test_ious)
+
+        outputs.append([train_losses, test_losses, test_ious])
         if not no_wandb:
-            wandb.log({"train_loss": np.mean(train_losses),
-                       "test_loss": np.mean(test_losses)})
+            wandb.log({"train_loss": train_losses,
+                       "test_loss": test_losses,
+                       "test_iou": test_ious})
         # else:
         # losses_test = np.zeros(len(test_loader))
 

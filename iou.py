@@ -7,9 +7,9 @@ from unet import Unet
 SMOOTH = 1e-6
 
 
-def iou_no_batch(outputs, labels):
-    intersection = (outputs & labels).sum((0, 1))  # Will be zero if Truth=0 or Prediction=0
-    union = (outputs | labels).sum((0, 1))  # Will be zzero if both are 0
+def iou_no_batch(outputs: torch.Tensor, labels: torch.Tensor):
+    intersection = (outputs & labels).float().sum((0, 1))  # Will be zero if Truth=0 or Prediction=0
+    union = (outputs | labels).float().sum((0, 1))  # Will be zzero if both are 0
 
     iou = (intersection + SMOOTH) / (union + SMOOTH)  # We smooth our devision to avoid 0/0
 
@@ -19,14 +19,15 @@ def iou_no_batch(outputs, labels):
     return iou.item()
 
 
-def iou_multi_channel(outputs, labels):
+def iou_multi_channel(outputs, labels, threshold=0.5):
+    outputs, labels = outputs.squeeze(), labels.squeeze().bool()
     if len(outputs.shape) != 3:
         raise ValueError('Only no batch_size supported')
 
     # outputs = outputs.squeeze(0)
     iou_channels = []
     for i in range(outputs.shape[0]):
-        iou_channels.append(iou_no_batch(outputs[i, :], labels[i, :]))
+        iou_channels.append(iou_no_batch(outputs[i, :] > threshold, labels[i, :]))
 
     return np.array(iou_channels)
 
@@ -41,8 +42,7 @@ def iou_global(dataloader, model, device):
 
             result = model(img)
 
-            iou = iou_multi_channel(result.cpu().detach().numpy().squeeze() > 0.5,
-                                    mask.cpu().numpy().squeeze().astype(bool))
+            iou = iou_multi_channel(result, mask)
 
             for i, item in enumerate(iou):
                 ious[i].append(item)
