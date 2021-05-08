@@ -8,8 +8,8 @@ command:
   - ${args}
 method: bayes
 metric:
-  goal: minimize
-  name: test_loss
+  goal: maximize
+  name: test_iou
 parameters:
   cutout_cnt:
     max: 400
@@ -40,15 +40,21 @@ parameters:
       - "false"
     distribution: categorical
   lr:
-    max: 0.0002
-    min: 0.00005
+    max: 0.0005
+    min: 0.00001
     distribution: uniform
   epochs:
-    max: 400
+    max: 200
     min: 100
     distribution: int_uniform
   optimizer:
     values:
       - "adam"
       - "sgd"
+    distribution: categorical
+  loss:
+    values:
+      - "bce"
+      - "dice"
+      - "bce_dice"
     distribution: categorical

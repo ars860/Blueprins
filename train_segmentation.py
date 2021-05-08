@@ -40,7 +40,7 @@ def transfer_knowledge_from_wandb(model, knowledge_path, run, device=device):
     model.load_state_dict(state_dict, strict=False)
 
 
-def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epochs=5, lr=1e-4, dice=None, focal=False,
+def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epochs=5, lr=1e-4, bce=True, dice=None, focal=False,
                           device=device, checkpoint=None, no_wandb=False, optim='adam'):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
@@ -56,13 +56,20 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
 
     def criterion(x, mask):
         # x = torch.sigmoid(x)
-        result = F.binary_cross_entropy(x, mask.float())
+        result = None
+        if bce:
+            result = F.binary_cross_entropy(x, mask.float())
 
         if focal:
+            if result is None:
+                result = F.binary_cross_entropy(x, mask.float())
+
             result = focal_loss(result, mask)
 
         if dice is not None and "weight" in dice:
             channels = dice['channels'] if 'channels' in dice else None
+            if result is None:
+                result = 0
             result += dice["weight"] * dice_loss(x, mask, channels=channels)
 
         return result
@@ -149,6 +156,7 @@ def train_segmentation(args):
         config.cutout_p = args.cutout_p
         config.vh = args.vh
         config.optimizer = args.optimizer
+        config.loss = args.loss
 
         if args.run_name is not None:
             wandb.run.name = args.run_name
@@ -214,7 +222,8 @@ def train_segmentation(args):
                     run.log_artifact(artifact)
 
     losses = train_as_segmantation(model, dataloader_train, dataloader_test, device=args.device, num_epochs=args.epochs,
-                                   lr=args.lr, checkpoint=checkpoint, no_wandb=args.no_wandb, optim=args.optimizer)
+                                   lr=args.lr, checkpoint=checkpoint, no_wandb=args.no_wandb, optim=args.optimizer,
+                                   bce='bce' in args.loss, dice={"weight": 1.0} if 'dice' in args.loss else None)
 
     if args.save is not None:
         np.savetxt(Path() / "logs" / f'{args.save}.out', losses)
@@ -261,6 +270,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--vh_', type=lambda s: s == 'true', default=None)
     parser.add_argument('--skip_type', type=str, default='skip')
+    parser.add_argument('--loss', type=str, default='bce')
 
     args = parser.parse_args()
 
