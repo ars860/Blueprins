@@ -100,6 +100,7 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
     # test_outputs = []
     for epoch in range(num_epochs):
         train_losses = np.zeros(len(data_loader))
+        model.train()
         # losses_test = np.zeros(len(test_loader))
 
         for i, (img, mask) in enumerate(data_loader):
@@ -133,6 +134,7 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
         test_losses = np.zeros(len(test_loader))
         test_ious = np.zeros(len(test_loader))
         with torch.no_grad():
+            model.eval()
             for i, (img, mask) in enumerate(test_loader):
                 img, mask = img.to(device), mask.to(device)
                 processed = model(img)
