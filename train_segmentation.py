@@ -21,14 +21,19 @@ import wandb
 device = 'cuda'
 
 
-def transfer_knowledge(model, knowledge_path, device=device):
+def transfer_knowledge(model, knowledge_path, device=device, freeze=False):
     state_dict = torch.load(knowledge_path, map_location=device)
     del state_dict['final.weight']
     del state_dict['final.bias']
     model.load_state_dict(state_dict, strict=False)
 
+    if freeze:
+        for name, param in model.named_parameters():
+            if 'down' in name:
+                param.requires_grad = False
 
-def transfer_knowledge_from_wandb(model, knowledge_path, run, device=device):
+
+def transfer_knowledge_from_wandb(model, knowledge_path, run, device=device, freeze=False):
     artifact = run.use_artifact(knowledge_path, type='model')
     artifact_dir = artifact.download()
     artifact_file = next(iter((Path() / artifact_dir).glob('*')))
@@ -39,9 +44,14 @@ def transfer_knowledge_from_wandb(model, knowledge_path, run, device=device):
     del state_dict['final.bias']
     model.load_state_dict(state_dict, strict=False)
 
+    if freeze:
+        for name, param in model.named_parameters():
+            if 'down' in name:
+                param.requires_grad = False
+
 
 def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epochs=5, lr=1e-4, bce=True, dice=None, focal=False,
-                          device=device, checkpoint=None, no_wandb=False, optim='adam'):
+                          device=device, checkpoint=None, no_wandb=False, optim='adam', sched=None):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
 
@@ -78,7 +88,11 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)  # torch.optim.SGD(model.parameters(), lr=lr)
     if optim == 'sgd':
         optimizer = torch.optim.SGD(model.parameters(), lr=lr)
-    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
+
+    scheduler = None
+    if sched is not None:
+        if sched == 'plateau':
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
 
     # length = len(dataloader)
 
@@ -107,6 +121,9 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
                 print('Epoch:{}/{}, Step:{}/{}, Loss:{:.6f}'.format(epoch + 1, num_epochs, i, len(data_loader),
                                                                     np.true_divide(train_losses.sum(),
                                                                                    (train_losses != 0).sum())))
+
+        if scheduler is not None:
+            scheduler.step(np.true_divide(train_losses.sum(), (train_losses != 0).sum()))
 
         if checkpoint is not None:
             checkpoint(epoch, model)
@@ -157,6 +174,9 @@ def train_segmentation(args):
         config.vh = args.vh
         config.optimizer = args.optimizer
         config.loss = args.loss
+        config.scheduler = args.scheduler
+        config.iou_concat = args.iou_concat
+        config.transfer_freeze = args.transfer_freeze
 
         if args.run_name is not None:
             wandb.run.name = args.run_name
@@ -169,9 +189,9 @@ def train_segmentation(args):
     if args.transfer is not None:
         if args.load_from_wandb:
             transfer_knowledge_from_wandb(model, f'ars860/diplom_autoencoders/{args.transfer}', run=run,
-                                          device=args.device)
+                                          device=args.device, freeze=args.transfer_freeze)
         else:
-            transfer_knowledge(model, Path() / 'learned_models' / args.transfer, device=args.device)
+            transfer_knowledge(model, Path() / 'learned_models' / args.transfer, device=args.device, freeze=args.transfer_freeze)
 
     if args.load is not None:
         model.load_state_dict(torch.load(Path() / 'learned_models' / args.load, map_location=args.device))
@@ -223,7 +243,8 @@ def train_segmentation(args):
 
     losses = train_as_segmantation(model, dataloader_train, dataloader_test, device=args.device, num_epochs=args.epochs,
                                    lr=args.lr, checkpoint=checkpoint, no_wandb=args.no_wandb, optim=args.optimizer,
-                                   bce='bce' in args.loss, dice={"weight": 1.0} if 'dice' in args.loss else None)
+                                   bce='bce' in args.loss, dice={"weight": 1.0} if 'dice' in args.loss else None,
+                                   sched=args.scheduler)
 
     if args.save is not None:
         np.savetxt(Path() / "logs" / f'{args.save}.out', losses)
@@ -272,6 +293,10 @@ if __name__ == '__main__':
     parser.add_argument('--skip_type', type=str, default='skip')
     parser.add_argument('--loss', type=str, default='bce')
 
+    parser.add_argument('--scheduler', type=str, default=None)
+    parser.add_argument('--iou_concat', type=lambda s: s == 'true', default=False)
+    parser.add_argument('--transfer_freeze', type=lambda s: s == 'true', default=False)
+
     args = parser.parse_args()
 
     if args.vh_ is not None:
@@ -282,6 +307,9 @@ if __name__ == '__main__':
             args.no_skip = True
 
     if args.transfer == '':
+        args.transfer = None
+
+    if args.scheduler == '':
         args.transfer = None
 
     if args.transfer is not None:

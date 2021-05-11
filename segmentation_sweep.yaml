@@ -4,30 +4,27 @@ command:
   - python3.7
   - ${program}
   - "--device"
-  - "cuda:1"
+  - "cuda:2"
   - ${args}
-method: bayes
+method: random
 metric:
   goal: maximize
   name: test_iou
 parameters:
   cutout_cnt:
     max: 400
-    min: 0
+    min: 150
     distribution: int_uniform
   transfer:
     values:
-      - "03_05/autoencoder/1e-4_50epochs_invert_no_skip.pt"
-      - "03_05/autoencoder/1e-4_50epochs_invert.pt"
-      - "03_05/autoencoder/1e-4_50epochs_no_skip.pt"
       - "03_05/autoencoder/1e-4_50epochs.pt"
-      - "03_05/autoencoder/1e-4_50epochs_invert_zero_skip.pt"
+      - "03_05/autoencoder/1e-4_50epochs_no_skip.pt"
       - "03_05/autoencoder/1e-4_50epochs_zero_skip.pt"
       - ""
     distribution: categorical
   cutout_p:
     max: 1
-    min: 0
+    min: 0.5
     distribution: uniform
   skip_type:
     values:
@@ -40,21 +37,32 @@ parameters:
       - "false"
     distribution: categorical
   lr:
-    max: 0.0005
-    min: 0.00001
+    max: 0.0003
+    min: 0.00005
     distribution: uniform
   epochs:
-    max: 200
-    min: 100
-    distribution: int_uniform
+    values: 200
+    distribution: constant
   optimizer:
-    values:
-      - "adam"
-      - "sgd"
-    distribution: categorical
+    value: "adam"
+    distribution: constant
   loss:
     values:
       - "bce"
-      - "dice"
       - "bce_dice"
+    distribution: categorical
+  dropout:
+    max: 0.05
+    min: 0
+    distribution: uniform
+  iou_concat:
+    value: "true"
+    distribution: constant
+  transfer_freeze:
+    value: "true"
+    distribution: constant
+  scheduler:
+    values:
+      - "no"
+      - "plateau"
     distribution: categorical

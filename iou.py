@@ -19,6 +19,14 @@ def iou_no_batch(outputs: torch.Tensor, labels: torch.Tensor):
     return iou.item()
 
 
+def iou_concat(outputs, labels, threshold=0.5):
+    outputs, labels = outputs.squeeze(), labels.squeeze().bool()
+
+    outputs, labels = torch.cat([output for output in outputs], dim=1) > threshold, torch.cat([label for label in labels], dim=1)
+
+    return iou_no_batch(outputs, labels)
+
+
 def iou_multi_channel(outputs, labels, threshold=0.5):
     outputs, labels = outputs.squeeze(), labels.squeeze().bool()
     if len(outputs.shape) != 3:
@@ -32,23 +40,36 @@ def iou_multi_channel(outputs, labels, threshold=0.5):
     return np.array(iou_channels)
 
 
-def iou_global(dataloader, model, device):
+def iou_global(dataloader, model, device, concat=True):
     with torch.no_grad():
         model = model.to(device)
 
-        ious = [[] for _ in range(next(iter(dataloader))[1].shape[1])]
+        if not concat:
+            ious = [[] for _ in range(next(iter(dataloader))[1].shape[1])]
+            for img, mask in dataloader:
+                img, mask = img.to(device), mask.to(device)
+
+                result = model(img)
+
+                iou = iou_multi_channel(result, mask)
+
+                for i, item in enumerate(iou):
+                    ious[i].append(item)
+
+            ious = np.vstack(ious)
+            return np.mean(ious, axis=1)
+
+        ious = []
         for img, mask in dataloader:
             img, mask = img.to(device), mask.to(device)
 
             result = model(img)
 
-            iou = iou_multi_channel(result, mask)
+            iou = iou_concat(result, mask)
+            ious.append(iou)
 
-            for i, item in enumerate(iou):
-                ious[i].append(item)
-
-        ious = np.vstack(ious)
-        return np.mean(ious, axis=1)
+        ious = np.array(ious)
+        return np.mean(ious)
 
 
 def iou_pytorch(outputs: torch.Tensor, labels: torch.Tensor):
