@@ -61,8 +61,8 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
     else:
         model.eval()
 
-    if not no_wandb:
-        wandb.watch(model, log_freq=100)
+    # if not no_wandb:
+    #     wandb.watch(model, log_freq=100)
 
     def criterion(x, mask):
         # x = torch.sigmoid(x)
