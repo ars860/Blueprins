@@ -10,7 +10,7 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
 from dataset import get_dataloaders_unsupervised, get_dataloaders_supervised
-from iou import iou_multi_channel
+from iou import iou_multi_channel, iou_global
 from losses import focal_loss, dice_loss
 from unet import Unet, SkipType
 
@@ -51,7 +51,7 @@ def transfer_knowledge_from_wandb(model, knowledge_path, run, device=device, fre
 
 
 def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epochs=5, lr=1e-4, bce=True, dice=None, focal=False,
-                          device=device, checkpoint=None, no_wandb=False, optim='adam', sched=None):
+                          device=device, checkpoint=None, no_wandb=False, optim='adam', sched=None, iou_c=False):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
 
@@ -132,16 +132,16 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
             #     torch.save(model.state_dict(), Path() / 'checkpoints' / )
 
         test_losses = np.zeros(len(test_loader))
-        test_ious = np.zeros(len(test_loader))
+        # test_ious = np.zeros(len(test_loader))
         with torch.no_grad():
             model.eval()
             for i, (img, mask) in enumerate(test_loader):
                 img, mask = img.to(device), mask.to(device)
                 processed = model(img)
                 test_losses[i] = criterion(processed, mask)
-                test_ious[i] = np.mean(iou_multi_channel(processed, mask))
+                # test_ious[i] = np.mean(iou_multi_channel(processed, mask))
 
-        train_losses, test_losses, test_ious = np.mean(train_losses), np.mean(test_losses), np.mean(test_ious)
+        train_losses, test_losses, test_ious = np.mean(train_losses), np.mean(test_losses), iou_global(test_loader, model=model, device=device, concat=iou_c)  # np.mean(test_ious)
 
         print(train_losses, test_losses, test_ious)
 
@@ -246,7 +246,7 @@ def train_segmentation(args):
     losses = train_as_segmantation(model, dataloader_train, dataloader_test, device=args.device, num_epochs=args.epochs,
                                    lr=args.lr, checkpoint=checkpoint, no_wandb=args.no_wandb, optim=args.optimizer,
                                    bce='bce' in args.loss, dice={"weight": 1.0} if 'dice' in args.loss else None,
-                                   sched=args.scheduler)
+                                   sched=args.scheduler, iou_c=args.iou_concat)
 
     if args.save is not None:
         np.savetxt(Path() / "logs" / f'{args.save}.out', losses)
@@ -292,14 +292,37 @@ if __name__ == '__main__':
     parser.add_argument('--layers', type=int, nargs='+', default=[8, 16, 32, 64, 128])
 
     parser.add_argument('--vh_', type=lambda s: s == 'true', default=None)
-    parser.add_argument('--skip_type', type=str, default='skip')
+    parser.add_argument('--skip_type', type=str, default=None)
     parser.add_argument('--loss', type=str, default='bce')
 
-    parser.add_argument('--scheduler', type=str, default=None)
+    parser.add_argument('--scheduler', type=str, default="no")
     parser.add_argument('--iou_concat', type=lambda s: s == 'true', default=False)
-    parser.add_argument('--transfer_freeze', type=lambda s: s == 'true', default=False)
+    parser.add_argument('--transfer_freeze', type=lambda s: s == 'true', default=None)
+
+    parser.add_argument('--config', type=str, default=None)
 
     args = parser.parse_args()
+
+    if args.config is not None:
+        assert args.transfer is None
+        assert args.transfer_freeze is None
+        assert args.skip_type is None
+
+        if args.config == 'skip':
+            args.transfer = None
+            args.skip_type = 'skip'
+        elif args.config == 'no_skip':
+            args.transfer = None
+            args.skip_type = 'no_skip'
+        else:
+            if 'no_skip' in args.config:
+                args.skip_type = 'no_skip'
+
+            if 'freeze' in args.config:
+                args.transfer_freeze = True
+                args.transfer = args.config.split('__')[1]
+            else:
+                args.transfer = args.config
 
     if args.vh_ is not None:
         args.vh = args.vh_
@@ -320,10 +343,14 @@ if __name__ == '__main__':
         else:
             args.no_skip = False
 
+    if args.transfer_freeze is None:
+        args.transfer_freeze = False
+
     # if args.save is None:
     #     args.save = f'sweep/{args.lr}_{args.epochs}epochs' \
     #                 f'{f"_transfer_{splitext(basename(args.transfer))[0]}" if args.transfer is not None else ""}' \
     #                 f'{"_no_skip" if args.no_skip and args.transfer is None else ""}'
 
     # print(args.save)
+
     train_segmentation(args)

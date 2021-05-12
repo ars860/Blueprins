@@ -43,6 +43,7 @@ def iou_multi_channel(outputs, labels, threshold=0.5):
 def iou_global(dataloader, model, device, concat=True):
     with torch.no_grad():
         model = model.to(device)
+        model.eval()
 
         if not concat:
             ious = [[] for _ in range(next(iter(dataloader))[1].shape[1])]
