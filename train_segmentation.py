@@ -337,7 +337,7 @@ if __name__ == '__main__':
             if 'no_skip' in args.config:
                 args.skip_type = 'no_skip'
 
-            splitted = args.config.splt('__')
+            splitted = args.config.split('__')
             args.transfer = next(filter(lambda s: s != "freeze" and s != "random_decoder", splitted))
 
             if 'freeze' in splitted:
