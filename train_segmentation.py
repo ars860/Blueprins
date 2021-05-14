@@ -293,7 +293,6 @@ if __name__ == '__main__':
     parser.add_argument('--root', type=str, default=str(Path() / 'blueprints'))
     parser.add_argument('--dont_save_model', action='store_true')
     parser.add_argument('--no_skip', action='store_true')
-    parser.add_argument('--random_decoder', action='store_true')
     parser.add_argument('--dropout', type=float, default=0)
     parser.add_argument('--run_name', type=str, default=None)
     parser.add_argument('--cutout_cnt', type=int, default=None)
@@ -312,6 +311,7 @@ if __name__ == '__main__':
     parser.add_argument('--scheduler', type=str, default="no")
     parser.add_argument('--iou_concat', type=lambda s: s == 'true', default=False)
     parser.add_argument('--transfer_freeze', type=lambda s: s == 'true', default=None)
+    parser.add_argument('--random_decoder', type=lambda s: s == 'true', default=None)
 
     parser.add_argument('--config', type=str, default=None)
 
