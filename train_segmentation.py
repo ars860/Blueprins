@@ -317,7 +317,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--hide_aug', type=int, default=0)
 
-    parser.add_argument('--cutout_config', type=str, default="0_0")
+    parser.add_argument('--cutout_config', type=str, default=None)
 
     args = parser.parse_args()
 
