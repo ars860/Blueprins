@@ -28,7 +28,7 @@ def transfer_knowledge(model, knowledge_path, device=device, freeze=False, rando
     del state_dict['final.bias']
 
     if random_decoder:
-        for name in state_dict:
+        for name in list(state_dict.keys()):
             if 'up' in name:
                 del state_dict[name]
 
