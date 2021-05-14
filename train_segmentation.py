@@ -22,10 +22,16 @@ import wandb
 device = 'cuda'
 
 
-def transfer_knowledge(model, knowledge_path, device=device, freeze=False):
+def transfer_knowledge(model, knowledge_path, device=device, freeze=False, random_decoder=False):
     state_dict = torch.load(knowledge_path, map_location=device)
     del state_dict['final.weight']
     del state_dict['final.bias']
+
+    if random_decoder:
+        for name in state_dict:
+            if 'up' in name:
+                del state_dict[name]
+
     model.load_state_dict(state_dict, strict=False)
 
     if freeze:
@@ -34,7 +40,9 @@ def transfer_knowledge(model, knowledge_path, device=device, freeze=False):
                 param.requires_grad = False
 
 
-def transfer_knowledge_from_wandb(model, knowledge_path, run, device=device, freeze=False):
+def transfer_knowledge_from_wandb(model, knowledge_path, run, device=device, freeze=False, random_decoder=False):
+    assert not random_decoder
+
     artifact = run.use_artifact(knowledge_path, type='model')
     artifact_dir = artifact.download()
     artifact_file = next(iter((Path() / artifact_dir).glob('*')))
@@ -181,6 +189,7 @@ def train_segmentation(args):
         config.iou_concat = args.iou_concat
         config.transfer_freeze = args.transfer_freeze
         config.hide_aug = args.hide_aug
+        config.random_decoder = args.random_decoder
 
         if args.run_name is not None:
             wandb.run.name = args.run_name
@@ -193,9 +202,9 @@ def train_segmentation(args):
     if args.transfer is not None:
         if args.load_from_wandb:
             transfer_knowledge_from_wandb(model, f'ars860/diplom_autoencoders/{args.transfer}', run=run,
-                                          device=args.device, freeze=args.transfer_freeze)
+                                          device=args.device, freeze=args.transfer_freeze, random_decoder=args.random_decoder)
         else:
-            transfer_knowledge(model, Path() / 'learned_models' / args.transfer, device=args.device, freeze=args.transfer_freeze)
+            transfer_knowledge(model, Path() / 'learned_models' / args.transfer, device=args.device, freeze=args.transfer_freeze, random_decoder=args.random_decoder)
 
     if args.load is not None:
         model.load_state_dict(torch.load(Path() / 'learned_models' / args.load, map_location=args.device))
@@ -284,6 +293,7 @@ if __name__ == '__main__':
     parser.add_argument('--root', type=str, default=str(Path() / 'blueprints'))
     parser.add_argument('--dont_save_model', action='store_true')
     parser.add_argument('--no_skip', action='store_true')
+    parser.add_argument('--random_decoder', action='store_true')
     parser.add_argument('--dropout', type=float, default=0)
     parser.add_argument('--run_name', type=str, default=None)
     parser.add_argument('--cutout_cnt', type=int, default=None)
@@ -315,6 +325,7 @@ if __name__ == '__main__':
         assert args.transfer is None
         assert args.transfer_freeze is None
         assert args.skip_type is None
+        assert args.random_decoder is None
 
         if args.config == 'skip':
             args.transfer = None
@@ -326,11 +337,13 @@ if __name__ == '__main__':
             if 'no_skip' in args.config:
                 args.skip_type = 'no_skip'
 
-            if 'freeze' in args.config:
+            splitted = args.config.splt('__')
+            args.transfer = next(filter(lambda s: s != "freeze" and s != "random_decoder", splitted))
+
+            if 'freeze' in splitted:
                 args.transfer_freeze = True
-                args.transfer = args.config.split('__')[1]
-            else:
-                args.transfer = args.config
+            if 'random_decoder' in splitted:
+                args.random_decoder = True
 
     if args.cutout_config is not None:
         assert args.cutout_cnt is None
