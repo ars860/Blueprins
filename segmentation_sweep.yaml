@@ -11,25 +11,24 @@ metric:
   goal: maximize
   name: test_iou
 parameters:
-  cutout_cnt:
-    max: 400
-    min: 150
-    distribution: int_uniform
-  transfer:
+  config:
     values:
-      - "03_05/autoencoder/1e-4_50epochs.pt"
       - "03_05/autoencoder/1e-4_50epochs_no_skip.pt"
       - "03_05/autoencoder/1e-4_50epochs_zero_skip.pt"
-      - ""
+      - "freeze__03_05/autoencoder/1e-4_50epochs_no_skip.pt"
+      - "freeze__03_05/autoencoder/1e-4_50epochs_zero_skip.pt"
     distribution: categorical
-  cutout_p:
-    max: 1
-    min: 0.5
-    distribution: uniform
-  skip_type:
+  cutout_config:
     values:
-      - "skip"
-      - "no_skip"
+      - "0_0"
+      - "0.5_100"
+      - "0.5_200"
+      - "0.5_300"
+      - "0.5_400"
+      - "0.75_100"
+      - "0.75_200"
+      - "0.75_300"
+      - "0.75_400"
     distribution: categorical
   vh_:
     values:
@@ -37,11 +36,13 @@ parameters:
       - "false"
     distribution: categorical
   lr:
-    max: 0.0003
-    min: 0.00005
-    distribution: uniform
+    values:
+      - 0.0002
+      - 0.0003
+      - 0.0004
+    distribution: categorical
   epochs:
-    values: 200
+    value: 200
     distribution: constant
   optimizer:
     value: "adam"
@@ -52,17 +53,18 @@ parameters:
       - "bce_dice"
     distribution: categorical
   dropout:
-    max: 0.05
-    min: 0
-    distribution: uniform
+    values:
+      - 0.1
+      - 0.05
+      - 0.025
+      - 0
+    distribution: categorical
   iou_concat:
     value: "true"
     distribution: constant
-  transfer_freeze:
-    value: "true"
-    distribution: constant
-  scheduler:
+  hide_aug:
     values:
-      - "no"
-      - "plateau"
+      - 0
+      - 2
+      - 5
     distribution: categorical

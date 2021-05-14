@@ -9,6 +9,7 @@ import torch.nn.functional as F
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
+import augmentation
 from dataset import get_dataloaders_unsupervised, get_dataloaders_supervised
 from iou import iou_multi_channel, iou_global
 from losses import focal_loss, dice_loss
@@ -179,6 +180,7 @@ def train_segmentation(args):
         config.scheduler = args.scheduler
         config.iou_concat = args.iou_concat
         config.transfer_freeze = args.transfer_freeze
+        config.hide_aug = args.hide_aug
 
         if args.run_name is not None:
             wandb.run.name = args.run_name
@@ -211,6 +213,8 @@ def train_segmentation(args):
     if args.vh:
         transforms = [A.VerticalFlip(), A.HorizontalFlip()]
     transforms.append(A.SmallestMaxSize(256))
+    if args.hide_aug is not None and args.hide_aug != 0:
+        transforms.append(augmentation.HideRectangle(min_cnt=1, max_cnt=args.hide_aug, channels=[2, 3, 4, 5], p=0.5))
     if args.cutout_cnt != 0 and args.cutout_p != 0:
         transforms.append(A.Cutout(num_holes=args.cutout_cnt, p=args.cutout_p))
     transforms.append(ToTensorV2())
@@ -282,8 +286,8 @@ if __name__ == '__main__':
     parser.add_argument('--no_skip', action='store_true')
     parser.add_argument('--dropout', type=float, default=0)
     parser.add_argument('--run_name', type=str, default=None)
-    parser.add_argument('--cutout_cnt', type=int, default=0)
-    parser.add_argument('--cutout_p', type=float, default=0)
+    parser.add_argument('--cutout_cnt', type=int, default=None)
+    parser.add_argument('--cutout_p', type=float, default=None)
     parser.add_argument('--no_wandb', action='store_true')
     parser.add_argument('--vh', action='store_true')
     parser.add_argument('--load_from_wandb', action='store_true')
@@ -300,6 +304,10 @@ if __name__ == '__main__':
     parser.add_argument('--transfer_freeze', type=lambda s: s == 'true', default=None)
 
     parser.add_argument('--config', type=str, default=None)
+
+    parser.add_argument('--hide_aug', type=int, default=0)
+
+    parser.add_argument('--cutout_config', type=str, default="0_0")
 
     args = parser.parse_args()
 
@@ -323,6 +331,21 @@ if __name__ == '__main__':
                 args.transfer = args.config.split('__')[1]
             else:
                 args.transfer = args.config
+
+    if args.cutout_config is not None:
+        assert args.cutout_cnt is None
+        assert args.cutout_p is None
+
+        p, cnt = args.cutout_config.split('_')
+        p, cnt = float(p), int(cnt)
+
+        args.cutout_cnt, args.cutout_p = cnt, p
+
+    if args.cutout_cnt is None:
+        args.cutout_cnt = 0
+
+    if args.cutout_p is None:
+        args.cutout_p = 0
 
     if args.vh_ is not None:
         args.vh = args.vh_
