@@ -102,6 +102,8 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
     if sched is not None:
         if sched == 'plateau':
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
+        if sched == 'step_lr':
+            scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
 
     # length = len(dataloader)
 
