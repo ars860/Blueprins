@@ -258,7 +258,7 @@ def train_segmentation(args):
 
     dice = next(filter(lambda s: 'dice' in s, args.loss.split('_')))
     dice_channels = list(map(int, filter(lambda s: s != 'dice', dice.split('|'))))
-    dice = {"weight": 1.0, "channels": dice_channels}
+    dice = {"weight": 1.0, "channels": None if dice_channels == [] else dice_channels}
 
     losses = train_as_segmantation(model, dataloader_train, dataloader_test, device=args.device, num_epochs=args.epochs,
                                    lr=args.lr, checkpoint=checkpoint, no_wandb=args.no_wandb, optim=args.optimizer,
