@@ -256,8 +256,8 @@ def train_segmentation(args):
                     artifact.add_file(str(Path() / 'checkpoints' / f'{args.save}_{e}epoch.pt'))
                     run.log_artifact(artifact)
 
-    dice = filter(lambda s: 'dice' in s, args.loss.split('_'))
-    if len(list(dice)) == 1:
+    dice = list(filter(lambda s: 'dice' in s, args.loss.split('_')))
+    if len(dice) == 1:
         dice, = dice
         dice_channels = list(map(int, filter(lambda s: s != 'dice', dice.split('|'))))
         dice = {"weight": 1.0, "channels": None if dice_channels == [] else dice_channels}
