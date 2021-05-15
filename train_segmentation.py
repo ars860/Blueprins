@@ -207,7 +207,7 @@ def train_segmentation(args):
             transfer_knowledge(model, Path() / 'learned_models' / args.transfer, device=args.device, freeze=args.transfer_freeze, random_decoder=args.random_decoder)
 
     if args.load is not None:
-        model.load_state_dict(torch.load(Path() / 'learned_models' / args.load, map_location=args.device))
+        model.load_state_dict(torch.load(Path() / args.load, map_location=args.device))
 
     imgs, masks = 'projs', 'mask.zip'
     # if args.cutout:
