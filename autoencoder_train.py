@@ -25,7 +25,7 @@ def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=Non
     else:
         model.eval()
 
-    wandb.watch(model, log_freq=100)
+    # wandb.watch(model, log_freq=100)
 
     criterion = nn.MSELoss()  # ???
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -121,6 +121,7 @@ if __name__ == '__main__':
         config.no_skip = args.no_skip
         config.zero_skip = args.zero_skip
         config.layers = args.layers
+        config.gaussian_noise = args.gaussian_noise
 
         if args.run_name is not None:
             wandb.run.name = args.run_name
