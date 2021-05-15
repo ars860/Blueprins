@@ -152,7 +152,9 @@ if __name__ == '__main__':
         np.savetxt(Path() / 'logs' / f'{args.save}.out', train_test_losses)
         torch.save(model.state_dict(), Path() / 'learned_models' / f'{args.save}.pt')
 
-        if not args.no_wandb:
-            artifact = wandb.Artifact('model', type='model')
-            artifact.add_file(str(Path() / 'learned_models' / f'{args.save}.pt'))
-            run.log_artifact(artifact)
+    if not args.no_wandb:
+        artifact = wandb.Artifact('model', type='model')
+        with artifact.new_file('sweep_model.pt', mode='wb') as f:
+            torch.save(model.state_dict(), f)
+        # artifact.add_file(str(Path() / 'learned_models' / f'{args.save}.pt'))
+        run.log_artifact(artifact)
