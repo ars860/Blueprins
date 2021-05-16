@@ -67,7 +67,8 @@ def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=Non
                             augmented = img
 
                         img, augmented = img.to(device), augmented.to(device)
-                        test_losses[j] = criterion(model(img), img if not invert else 1. - img)
+                        x = model(img) if not no_sigmoid else model.forward_vars(augmented)['res']
+                        test_losses[j] = criterion(x, img if not invert else 1. - img)
 
                 wandb.log({"train_loss": np.true_divide(train_losses.sum(), (train_losses != 0).sum()),
                            "test_loss": np.mean(test_losses)})
