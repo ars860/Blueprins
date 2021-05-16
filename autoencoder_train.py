@@ -15,7 +15,7 @@ import wandb
 
 
 def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=None, device=device, lr=1e-3,
-                         invert=False, plot_each=500):
+                         invert=False, plot_each=500, no_sigmoid=False):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
 
@@ -44,7 +44,7 @@ def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=Non
 
             optimizer.zero_grad()
 
-            x = model(augmented)
+            x = model(augmented) if not no_sigmoid else model.forward_vars(augmented)['res']
             # x = torch.sigmoid(x)
             loss = criterion(x, img if not invert else 1. - img)
 
@@ -100,6 +100,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--layers', type=int, nargs='+', default=[8, 16, 32, 64, 128])
 
+    parser.add_argument('--no_sigmoid', type=lambda s: s == 'true', default=None)
+
     args = parser.parse_args()
 
     if args.no_skip and args.zero_skip:
@@ -122,6 +124,7 @@ if __name__ == '__main__':
         config.zero_skip = args.zero_skip
         config.layers = args.layers
         config.gaussian_noise = args.gaussian_noise
+        config.no_sigmoid = args.no_sigmoid
 
         if args.run_name is not None:
             wandb.run.name = args.run_name
@@ -142,7 +145,7 @@ if __name__ == '__main__':
 
     train_test_losses = train_as_autoencoder(model, dataloader_train, dataloader_test, mode='train',
                                              num_epochs=args.epochs, device=args.device,
-                                             lr=args.lr, invert=args.invert)
+                                             lr=args.lr, invert=args.invert, no_sigmoid=args.no_sigmoid)
 
     if args.save is not None:
         save_dir, _ = os.path.split(args.save)
