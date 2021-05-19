@@ -260,8 +260,8 @@ def train_segmentation(args):
     #                                                                                             mask_folder=masks,
     #                                                                                             transforms=transforms)
 
-    main_dataset_train = BlueprintsSupervisedDataset(mode='train', fraction=0.8, root=args.root, image_folder=imgs, mask_folder=masks, transforms=transforms)
-    main_dataset_test = BlueprintsSupervisedDataset(mode='test', fraction=0.8, root=args.root, image_folder=imgs, mask_folder=masks, transforms=transforms)
+    main_dataset_train = BlueprintsSupervisedDataset(mode='train', fraction=0.9, root=args.root, image_folder=imgs, mask_folder=masks, transforms=transforms)
+    main_dataset_test = BlueprintsSupervisedDataset(mode='test', fraction=0.9, root=args.root, image_folder=imgs, mask_folder=masks, transforms=transforms)
     datasets_train, datasets_test = [main_dataset_train], [main_dataset_test]
     for root in args.additional_roots:
         dataset_train = BlueprintsSupervisedDataset(root, imgs, masks, mode='train', transforms=transforms, channels=args.additional_roots_channels)
