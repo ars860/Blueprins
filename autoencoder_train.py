@@ -13,6 +13,7 @@ from unet import Unet, SkipType
 
 import wandb
 
+import torchvision.transforms as tr
 
 def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=None, device=device, lr=1e-3,
                          invert=False, plot_each=500, no_sigmoid=False):
@@ -139,13 +140,15 @@ if __name__ == '__main__':
     if not args.no_wandb:
         wandb.watch(model, log_freq=100)
 
+    transforms = [tr.Resize(256), tr.ToTensor()]
+    if args.gaussian_noise is not None:
+        transforms.append(AddGaussianNoise(std=args.gaussian_noise))
+
     _, dataloader_train, _, dataloader_test = get_dataloaders_unsupervised(dpi=50,
                                                                            workers=2,
                                                                            image_folder=args.dataset,
                                                                            shuffle_seed=args.shuffle_seed,
-                                                                           augmentations=None if args.gaussian_noise is None
-                                                                           else AddGaussianNoise(
-                                                                               std=args.gaussian_noise))
+                                                                           augmentations=transforms)
 
     train_test_losses = train_as_autoencoder(model, dataloader_train, dataloader_test, mode='train',
                                              num_epochs=args.epochs, device=args.device,

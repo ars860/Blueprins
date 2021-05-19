@@ -205,8 +205,8 @@ class BlueprintsUnsupervisedDataset(Dataset):
 
         if transforms is None:
             transforms = tr.ToTensor()
-        else:
-            transforms = tr.Compose([tr.ToTensor(), transforms])
+        # else:
+        #     transforms = tr.Compose([tr.ToTensor(), transforms])
 
         self.root = root
         self.transforms = transforms
