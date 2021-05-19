@@ -91,7 +91,7 @@ if __name__ == '__main__':
     parser.add_argument('--gaussian_noise', type=float, default=None)
     parser.add_argument('--save', type=str, default=None)
     parser.add_argument('--epochs', type=int, default=10)
-    parser.add_argument('--dataset', type=str, default='projs')
+    parser.add_argument('--dataset', type=str, default='better_projs')
     parser.add_argument('--no_skip', action='store_true')
     parser.add_argument('--zero_skip', action='store_true')
     parser.add_argument('--invert', action='store_true')
@@ -104,6 +104,9 @@ if __name__ == '__main__':
     parser.add_argument('--no_sigmoid', type=lambda s: s == 'true', default=None)
 
     args = parser.parse_args()
+
+    if args.no_sigmoid is None:
+        args.no_sigmoid = False
 
     if args.no_skip and args.zero_skip:
         raise ValueError('Only one skip type can be specified: <no_skip> or <zero_skip>')
