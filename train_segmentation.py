@@ -78,7 +78,7 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
         # x = torch.sigmoid(x)
 
         if channels is not None:
-            x = x[channels]
+            x = x[:, channels]
 
         result = None
         if bce:
@@ -254,9 +254,9 @@ def train_segmentation(args):
     main_dataset_train = BlueprintsSupervisedDataset(mode='train', root=args.root, image_folder=imgs, mask_folder=masks, transforms=transforms)
     main_dataset_test = BlueprintsSupervisedDataset(mode='test', root=args.root, image_folder=imgs, mask_folder=masks, transforms=transforms)
     datasets_train, datasets_test = [main_dataset_train], [main_dataset_test]
-    for root, channels in zip(args.additional_roots, args.additional_roots_channels):
-        dataset_train = BlueprintsSupervisedDataset(root, imgs, masks, mode='train', transforms=transforms, channels=channels)
-        dataset_test = BlueprintsSupervisedDataset(root, imgs, masks, mode='test', transforms=transforms, channels=channels)
+    for root in args.additional_roots:
+        dataset_train = BlueprintsSupervisedDataset(root, imgs, masks, mode='train', transforms=transforms, channels=args.additional_roots_channels)
+        dataset_test = BlueprintsSupervisedDataset(root, imgs, masks, mode='test', transforms=transforms, channels=args.additional_roots_channels)
         datasets_train.append(dataset_train)
         datasets_test.append(dataset_test)
 
@@ -355,7 +355,7 @@ if __name__ == '__main__':
     parser.add_argument('--cutout_config', type=str, default=None)
 
     parser.add_argument('--additional_roots', type=str, nargs='+', default=[str(Path() / 'blueprints' / 'new')])
-    parser.add_argument('--additional_roots_channels', type=int, nargs='+', default=[3, 4, 5, 6, 7, 10])
+    parser.add_argument('--additional_roots_channels', type=lambda s: list(map(int, s.split('_'))), default=[3, 4, 5, 6, 7, 10])
 
     args = parser.parse_args()
 
