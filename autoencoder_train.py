@@ -143,6 +143,7 @@ if __name__ == '__main__':
     transforms = [tr.Resize(256), tr.ToTensor()]
     if args.gaussian_noise is not None:
         transforms.append(AddGaussianNoise(std=args.gaussian_noise))
+    transforms = tr.Compose(transforms)
 
     _, dataloader_train, _, dataloader_test = get_dataloaders_unsupervised(dpi=50,
                                                                            workers=2,
