@@ -209,6 +209,7 @@ def train_segmentation(args):
         config.transfer_freeze = args.transfer_freeze
         config.hide_aug = args.hide_aug
         config.random_decoder = args.random_decoder
+        config.additional_dataset = args.additional_roots is not None and len(args.additional_roots) != 0
 
         if args.run_name is not None:
             wandb.run.name = args.run_name

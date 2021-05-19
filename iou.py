@@ -47,7 +47,13 @@ def iou_global(dataloader, model, device, concat=True):
 
         if not concat:
             ious = [[] for _ in range(next(iter(dataloader))[1].shape[1])]
-            for img, mask in dataloader:
+            for smth in dataloader:
+                channels = None
+                if len(smth) == 2:
+                    img, mask = smth
+                else:
+                    channels, img, mask = smth
+
                 img, mask = img.to(device), mask.to(device)
 
                 result = model(img)
@@ -61,10 +67,20 @@ def iou_global(dataloader, model, device, concat=True):
             return np.mean(ious, axis=1)
 
         ious = []
-        for img, mask in dataloader:
+        for smth in dataloader:
+            channels = None
+            if len(smth) == 2:
+                img, mask = smth
+            else:
+                channels, img, mask = smth
+
             img, mask = img.to(device), mask.to(device)
 
             result = model(img)
+
+            if channels is not None:
+                channel2mask = dict(list(zip(map(lambda ch: ch.item(), channels), [mask[0, i] for i in range(mask.shape[1])])))
+                mask = torch.unsqueeze(torch.stack([channel2mask[i] if i in channel2mask else torch.zeros_like(result[0, 0]) for i in range(result.shape[1])]), 0).to(device)
 
             iou = iou_concat(result, mask)
             ious.append(iou)
