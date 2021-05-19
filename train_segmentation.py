@@ -8,9 +8,10 @@ import torch
 import torch.nn.functional as F
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+from torch.utils.data import ConcatDataset, DataLoader
 
 import augmentation
-from dataset import get_dataloaders_unsupervised, get_dataloaders_supervised
+from dataset import get_dataloaders_unsupervised, get_dataloaders_supervised, BlueprintsSupervisedDataset
 from iou import iou_multi_channel, iou_global
 from losses import focal_loss, dice_loss
 from unet import Unet, SkipType
@@ -73,8 +74,12 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
     # if not no_wandb:
     #     wandb.watch(model, log_freq=100)
 
-    def criterion(x, mask):
+    def criterion(x, mask, channels=None):
         # x = torch.sigmoid(x)
+
+        if channels is not None:
+            x = x[channels]
+
         result = None
         if bce:
             result = F.binary_cross_entropy(x, mask.float())
@@ -86,10 +91,10 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
             result = focal_loss(result, mask)
 
         if dice is not None and "weight" in dice:
-            channels = dice['channels'] if 'channels' in dice else None
+            dice_channels = dice['channels'] if 'channels' in dice else None
             if result is None:
                 result = 0
-            result += dice["weight"] * dice_loss(x, mask, channels=channels)
+            result += dice["weight"] * dice_loss(x, mask, channels=dice_channels)
 
         return result
 
@@ -114,7 +119,13 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
         model.train()
         # losses_test = np.zeros(len(test_loader))
 
-        for i, (img, mask) in enumerate(data_loader):
+        for i, smth in enumerate(data_loader):
+            channels = None
+            if len(smth) == 2:
+                img, mask = smth
+            else:
+                channels, img, mask = smth
+
             img, mask = img.to(device), mask.to(device)
             optimizer.zero_grad()
 
@@ -122,7 +133,7 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
             # img = 1 - img
             x = model(img)
             # x = torch.sigmoid(x)
-            loss = criterion(x, mask)  # F.binary_cross_entropy(x, mask.float()) + criterion(x, mask)
+            loss = criterion(x, mask, channels=channels)  # F.binary_cross_entropy(x, mask.float()) + criterion(x, mask)
 
             if mode == 'train':
                 loss.backward()
@@ -235,10 +246,24 @@ def train_segmentation(args):
     # if args.cutout_cnt != 0:
     #     transforms = A.Compose([A.VerticalFlip(), A.HorizontalFlip(), A.SmallestMaxSize(256), A.Cutout(num_holes=args.cutout_cnt, p=args.cutout_p), ToTensorV2()])
 
-    dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised(root=args.root,
-                                                                                                image_folder=imgs,
-                                                                                                mask_folder=masks,
-                                                                                                transforms=transforms)
+    # dataset_train, dataloader_train, dataset_test, dataloader_test = get_dataloaders_supervised(root=args.root,
+    #                                                                                             image_folder=imgs,
+    #                                                                                             mask_folder=masks,
+    #                                                                                             transforms=transforms)
+
+    main_dataset_train = BlueprintsSupervisedDataset(mode='train', root=args.root, image_folder=imgs, mask_folder=masks, transforms=transforms)
+    main_dataset_test = BlueprintsSupervisedDataset(mode='test', root=args.root, image_folder=imgs, mask_folder=masks, transforms=transforms)
+    datasets_train, datasets_test = [main_dataset_train], [main_dataset_test]
+    for root, channels in zip(args.additional_roots, args.additional_roots_channels):
+        dataset_train = BlueprintsSupervisedDataset(root, imgs, masks, mode='train', transforms=transforms, channels=channels)
+        dataset_test = BlueprintsSupervisedDataset(root, imgs, masks, mode='test', transforms=transforms, channels=channels)
+        datasets_train.append(dataset_train)
+        datasets_test.append(dataset_test)
+
+    dataset_train = ConcatDataset(datasets_train)
+    dataloader_train = DataLoader(dataset_train, num_workers=2)
+    dataset_test = ConcatDataset(datasets_test)
+    dataloader_test = DataLoader(dataset_test, num_workers=2)
 
     if args.save is not None:
         save_dir, _ = os.path.split(args.save)
@@ -328,6 +353,9 @@ if __name__ == '__main__':
     parser.add_argument('--hide_aug', type=int, default=0)
 
     parser.add_argument('--cutout_config', type=str, default=None)
+
+    parser.add_argument('--additional_roots', type=str, nargs='+', default=[str(Path() / 'blueprints' / 'new')])
+    parser.add_argument('--additional_roots_channels', type=int, nargs='+', default=[3, 4, 5, 6, 7, 10])
 
     args = parser.parse_args()
 

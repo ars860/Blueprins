@@ -31,10 +31,12 @@ class BlueprintsSupervisedDataset(Dataset):
                  fraction: float = 0.9,
                  mode: str = None,
                  zip_archive=True,
-                 filter_test=None) -> None:
+                 filter_test=None,
+                 channels=None) -> None:
         if transforms is None:
             transforms = A.Compose([A.SmallestMaxSize(256), ToTensorV2()])
 
+        self.channels = channels
         self.root = root
         self.transforms = transforms
         self.zip_archive = zip_archive
@@ -113,6 +115,9 @@ class BlueprintsSupervisedDataset(Dataset):
                 augmented = A.Compose([A.SmallestMaxSize(256), ToTensorV2()])(image=image/255, masks=[m for m in mask])
 
             image, mask = augmented['image'].float(), torch.FloatTensor(np.stack(augmented['masks']))
+
+            if self.channels is not None:
+                return self.channels, image, mask
 
             return image, mask
 
