@@ -157,10 +157,16 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
         # test_ious = np.zeros(len(test_loader))
         with torch.no_grad():
             model.eval()
-            for i, (img, mask) in enumerate(test_loader):
+            for i, smth in enumerate(test_loader):
+                channels = None
+                if len(smth) == 2:
+                    img, mask = smth
+                else:
+                    channels, img, mask = smth
+
                 img, mask = img.to(device), mask.to(device)
                 processed = model(img)
-                test_losses[i] = criterion(processed, mask)
+                test_losses[i] = criterion(processed, mask, channels=channels)
                 # test_ious[i] = np.mean(iou_multi_channel(processed, mask))
 
         train_losses, test_losses, test_ious = np.mean(train_losses), np.mean(test_losses), iou_global(test_loader, model=model, device=device, concat=iou_c)  # np.mean(test_ious)
