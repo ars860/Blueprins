@@ -265,14 +265,14 @@ class BlueprintsUnsupervisedDataset(Dataset):
         else:
             image = Image.open(image_path)  # 255 - np.array(Image.open(image_path))
 
-        if self.transforms:
+        if self.transforms is not None:
             image = self.transforms(image)
         return image
 
 
 def get_dataloaders_unsupervised(dpi=50,
                                  root=str(Path() / 'xpc_11'),
-                                 image_folder='projs',
+                                 image_folder='better_projs',
                                  batch_size=1,
                                  workers=2,
                                  augmentations=None,
