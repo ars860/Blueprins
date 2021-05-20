@@ -127,6 +127,9 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
                 channels, img, mask = smth
                 channels = list(map(lambda ch: ch.item(), channels))
 
+                for g in optimizer.param_groups:
+                    g['lr'] = g['lr'] / args.reduce_lr_on_additional
+
             img, mask = img.to(device), mask.to(device)
             optimizer.zero_grad()
 
@@ -145,6 +148,10 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
                 print('Epoch:{}/{}, Step:{}/{}, Loss:{:.6f}'.format(epoch + 1, num_epochs, i, len(data_loader),
                                                                     np.true_divide(train_losses.sum(),
                                                                                    (train_losses != 0).sum())))
+
+            if channels is not None:
+                for g in optimizer.param_groups:
+                    g['lr'] = g['lr'] * args.reduce_lr_on_additional
 
         if scheduler is not None:
             scheduler.step(np.true_divide(train_losses.sum(), (train_losses != 0).sum()))
@@ -212,6 +219,7 @@ def train_segmentation(args):
         config.hide_aug = args.hide_aug
         config.random_decoder = args.random_decoder
         config.additional_dataset = args.additional_roots is not None and len(args.additional_roots) != 0
+        config.reduce_lr_on_additional = args.reduce_lr_on_additional
 
         if args.run_name is not None:
             wandb.run.name = args.run_name
@@ -366,6 +374,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--additional_roots', type=str, nargs='+', default=[str(Path() / 'blueprints' / 'new')])
     parser.add_argument('--additional_roots_channels', type=lambda s: list(map(int, s.split('_'))), default=[2, 3, 4, 5, 6, 9])
+
+    parser.add_argument('--reduce_lr_on_additional', type=int, default=1)
 
     args = parser.parse_args()
 
