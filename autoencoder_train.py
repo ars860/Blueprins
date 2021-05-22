@@ -58,9 +58,6 @@ def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=Non
             #     print('Epoch:{}/{}, Step:{}/{}, Loss:{:.4f}'.format(epoch + 1, num_epochs, i + 1, len(data_loader),
             #                                                         train_losses / (i + 1)))
 
-            if checkpoint is not None:
-                checkpoint(epoch, model)
-
             if (plot_each is not None and (i + 1) % plot_each == 0) or i == len(data_loader) - 1:
                 test_losses = np.zeros(len(test_loader))
                 with torch.no_grad():
@@ -84,6 +81,9 @@ def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=Non
                                                                                           train_losses.sum(),
                                                                                           (train_losses != 0).sum()),
                                                                                       np.mean(test_losses)))
+
+        if checkpoint is not None:
+            checkpoint(epoch, model)
 
     return np.vstack(outputs)
 
