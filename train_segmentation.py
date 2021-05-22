@@ -271,12 +271,13 @@ def train_segmentation(args):
     main_dataset_train = BlueprintsSupervisedDataset(mode='train', fraction=0.9, root=args.root, image_folder=imgs, mask_folder=masks, transforms=transforms)
     main_dataset_test = BlueprintsSupervisedDataset(mode='test', fraction=0.9, root=args.root, image_folder=imgs, mask_folder=masks, transforms=transforms)
     datasets_train, datasets_test = [main_dataset_train], [main_dataset_test]
-    for root in args.additional_roots:
-        dataset_train = BlueprintsSupervisedDataset(root, imgs, masks, mode='train', transforms=transforms, channels=args.additional_roots_channels)
-        # TODO: think
-        # dataset_test = BlueprintsSupervisedDataset(root, imgs, masks, mode='test', transforms=transforms, channels=args.additional_roots_channels)
-        datasets_train.append(dataset_train)
-        # datasets_test.append(dataset_test)
+    if args.additional_roots != ['']:
+        for root in args.additional_roots:
+            dataset_train = BlueprintsSupervisedDataset(root, imgs, masks, mode='train', transforms=transforms, channels=args.additional_roots_channels)
+            # TODO: think
+            # dataset_test = BlueprintsSupervisedDataset(root, imgs, masks, mode='test', transforms=transforms, channels=args.additional_roots_channels)
+            datasets_train.append(dataset_train)
+            # datasets_test.append(dataset_test)
 
     dataset_train = ConcatDataset(datasets_train)
     dataloader_train = DataLoader(dataset_train, num_workers=2)
