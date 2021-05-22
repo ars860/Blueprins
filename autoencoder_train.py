@@ -16,7 +16,7 @@ import wandb
 import torchvision.transforms as tr
 
 def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=None, device=device, lr=1e-3,
-                         invert=False, plot_each=500, no_sigmoid=False):
+                         invert=False, plot_each=500, no_sigmoid=False, checkpoint=None):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
 
@@ -58,7 +58,10 @@ def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=Non
             #     print('Epoch:{}/{}, Step:{}/{}, Loss:{:.4f}'.format(epoch + 1, num_epochs, i + 1, len(data_loader),
             #                                                         train_losses / (i + 1)))
 
-            if plot_each is not None and (i + 1) % plot_each == 0 or i == len(data_loader) - 1:
+            if checkpoint is not None:
+                checkpoint(epoch, model)
+
+            if (plot_each is not None and (i + 1) % plot_each == 0) or i == len(data_loader) - 1:
                 test_losses = np.zeros(len(test_loader))
                 with torch.no_grad():
                     for j, img in enumerate(test_loader):
@@ -68,7 +71,7 @@ def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=Non
                             augmented = img
 
                         img, augmented = img.to(device), augmented.to(device)
-                        x = model(img) if not no_sigmoid else model.forward_vars(augmented)['res']
+                        x = model(img) if not no_sigmoid else model.forward_vars(img)['res']
                         test_losses[j] = criterion(x, img if not invert else 1. - img)
 
                 wandb.log({"train_loss": np.true_divide(train_losses.sum(), (train_losses != 0).sum()),
@@ -103,6 +106,8 @@ if __name__ == '__main__':
     parser.add_argument('--layers', type=int, nargs='+', default=[8, 16, 32, 64, 128])
 
     parser.add_argument('--no_sigmoid', type=lambda s: s == 'true', default=None)
+
+    parser.add_argument('--checkpoint', type=int, default=None)
 
     args = parser.parse_args()
 
@@ -151,9 +156,22 @@ if __name__ == '__main__':
                                                                            shuffle_seed=args.shuffle_seed,
                                                                            augmentations=transforms)
 
+    def checkpoint(e, m):
+        if args.checkpoint is not None and args.checkpoint != -1:
+            if (e + 1) % args.checkpoint == 0:
+                if args.save is not None:
+                    torch.save(m.state_dict(), Path() / 'checkpoints' / f'{args.save}_{e}epoch.pt')
+
+                if not args.no_wandb:
+                    artifact = wandb.Artifact('checkpoints', type='model')
+                    with artifact.new_file(f'checkpoint_{e}.pt', mode='wb') as f:
+                        torch.save(model.state_dict(), f)
+                    run.log_artifact(artifact)
+
     train_test_losses = train_as_autoencoder(model, dataloader_train, dataloader_test, mode='train',
                                              num_epochs=args.epochs, device=args.device,
-                                             lr=args.lr, invert=args.invert, no_sigmoid=args.no_sigmoid)
+                                             lr=args.lr, invert=args.invert, no_sigmoid=args.no_sigmoid,
+                                             plot_each=None, checkpoint=args.checkpoint)
 
     if args.save is not None:
         save_dir, _ = os.path.split(args.save)
