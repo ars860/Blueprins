@@ -171,7 +171,7 @@ if __name__ == '__main__':
     train_test_losses = train_as_autoencoder(model, dataloader_train, dataloader_test, mode='train',
                                              num_epochs=args.epochs, device=args.device,
                                              lr=args.lr, invert=args.invert, no_sigmoid=args.no_sigmoid,
-                                             plot_each=None, checkpoint=args.checkpoint)
+                                             plot_each=None, checkpoint=checkpoint)
 
     if args.save is not None:
         save_dir, _ = os.path.split(args.save)
