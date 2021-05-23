@@ -294,7 +294,7 @@ def train_segmentation(args):
 
     def checkpoint(e, m):
         if args.save is not None:
-            if args.checkpoint != -1 and e % args.checkpoint == 0:
+            if args.checkpoint != -1 and (e + 1) % args.checkpoint == 0:
                 torch.save(m.state_dict(), Path() / 'checkpoints' / f'{args.save}_{e}epoch.pt')
 
                 if not args.no_wandb:
@@ -363,7 +363,7 @@ if __name__ == '__main__':
     parser.add_argument('--loss', type=str, default='bce')
 
     parser.add_argument('--scheduler', type=str, default="no")
-    parser.add_argument('--iou_concat', type=lambda s: s == 'true', default=False)
+    parser.add_argument('--iou_concat', type=lambda s: s == 'true', default=True)
     parser.add_argument('--transfer_freeze', type=lambda s: s == 'true', default=None)
     parser.add_argument('--random_decoder', type=lambda s: s == 'true', default=None)
 
