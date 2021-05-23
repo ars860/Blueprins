@@ -61,7 +61,7 @@ def transfer_knowledge_from_wandb(model, knowledge_path, run, device=device, fre
 
 
 def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epochs=5, lr=1e-4, bce=True, dice=None, focal=False,
-                          device=device, checkpoint=None, no_wandb=False, optim='adam', sched=None, iou_c=False):
+                          device=device, checkpoint=None, no_wandb=False, optim='adam', sched=None, iou_c=False, watch=False):
     if not (mode == 'train' or mode == 'test'):
         raise ValueError("mode should be 'train' or 'test'")
 
@@ -71,8 +71,8 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
     else:
         model.eval()
 
-    # if not no_wandb:
-    #     wandb.watch(model, log_freq=100)
+    if not no_wandb and watch:
+        wandb.watch(model, log_freq=100)
 
     def criterion(x, mask, channels=None):
         # x = torch.sigmoid(x)
@@ -313,7 +313,7 @@ def train_segmentation(args):
     losses = train_as_segmantation(model, dataloader_train, dataloader_test, device=args.device, num_epochs=args.epochs,
                                    lr=args.lr, checkpoint=checkpoint, no_wandb=args.no_wandb, optim=args.optimizer,
                                    bce='bce' in args.loss, focal='focal' in args.loss, dice=dice,
-                                   sched=args.scheduler, iou_c=args.iou_concat)
+                                   sched=args.scheduler, iou_c=args.iou_concat, watch=not args.transfer_freeze)
 
     if args.save is not None:
         np.savetxt(Path() / "logs" / f'{args.save}.out', losses)
