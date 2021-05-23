@@ -15,6 +15,7 @@ import wandb
 
 import torchvision.transforms as tr
 
+
 def train_as_autoencoder(model, data_loader, test_loader, num_epochs=5, mode=None, device=device, lr=1e-3,
                          invert=False, plot_each=500, no_sigmoid=False, checkpoint=None):
     if not (mode == 'train' or mode == 'test'):
@@ -108,6 +109,7 @@ if __name__ == '__main__':
     parser.add_argument('--no_sigmoid', type=lambda s: s == 'true', default=None)
 
     parser.add_argument('--checkpoint', type=int, default=None)
+    parser.add_argument('--load', type=str, default=None)
 
     args = parser.parse_args()
 
@@ -135,12 +137,16 @@ if __name__ == '__main__':
         config.layers = args.layers
         config.gaussian_noise = args.gaussian_noise
         config.no_sigmoid = args.no_sigmoid
+        config.load = args.load
 
         if args.run_name is not None:
             wandb.run.name = args.run_name
             wandb.run.save()
 
     model = Unet(layers=args.layers, output_channels=1, skip=skip_type)
+
+    if args.load is not None:
+        model.load_state_dict(torch.load(args.load, map_location=device))
 
     if not args.no_wandb:
         wandb.watch(model, log_freq=100)
@@ -156,6 +162,7 @@ if __name__ == '__main__':
                                                                            shuffle_seed=args.shuffle_seed,
                                                                            augmentations=transforms)
 
+
     def checkpoint(e, m):
         if args.checkpoint is not None and args.checkpoint != -1:
             if (e + 1) % args.checkpoint == 0:
@@ -167,6 +174,7 @@ if __name__ == '__main__':
                     with artifact.new_file(f'checkpoint_{e}.pt', mode='wb') as f:
                         torch.save(model.state_dict(), f)
                     run.log_artifact(artifact)
+
 
     train_test_losses = train_as_autoencoder(model, dataloader_train, dataloader_test, mode='train',
                                              num_epochs=args.epochs, device=args.device,

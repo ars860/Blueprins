@@ -19,7 +19,9 @@ class UpBlock(nn.Module):
         self.upconv = nn.ConvTranspose2d(ch_out * 2, ch_out * 2, kernel_size=3, padding=1, stride=2, output_padding=1)
         # self.upconv = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         self.conv1 = nn.Conv2d(ch_out * 2 if skip == SkipType.NO_SKIP else ch_out * 3, ch_out, kernel_size=3, padding=1)
+        self.relu1 = nn.ReLU()
         self.conv2 = nn.Conv2d(ch_out, ch_out, kernel_size=3, padding=1)
+        self.relu2 = nn.ReLU()
 
         if dropout is not None and dropout != 0:
             self.dropout = nn.Dropout(p=dropout)
@@ -42,8 +44,8 @@ class UpBlock(nn.Module):
             x1 = u
 
         # x1 = torch.cat((x, u), dim=1) if self.skip else u
-        x2 = self.conv1(x1)
-        x3 = self.conv2(x2)
+        x2 = self.relu1(self.conv1(x1))
+        x3 = self.relu2(self.conv2(x2))
         if getattr(self, 'dropout', None) is not None:
             x3 = self.dropout(x3)
         return x3
