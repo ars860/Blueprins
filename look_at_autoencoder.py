@@ -50,7 +50,7 @@ if __name__ == '__main__':
     model.load_state_dict(
         torch.load(Path() / 'learned_models' / '03_05' / 'autoencoder' / '1e-4_50epochs.pt', map_location=device))
 
-    get_last_UpBlock_weights(model)
+    # get_last_UpBlock_weights(model)
 
     skip_mean, residual_mean = get_last_conv_weights(model)
     print(f'skip_mean: {skip_mean}, residual_mean: {residual_mean}')

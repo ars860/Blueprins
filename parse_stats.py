@@ -135,7 +135,7 @@ if __name__ == '__main__':
 
     titles = None
     # titles = ['Autoencoder', 'Autoencoder invert', 'Autoencoder no_skip invert', 'Autoencoder zero_skip invert', 'Autoencoder no_skip', 'Autoencoder zero_skip']
-    titles = ['Segmentation no transfer']
+    # titles = ['Segmentation no transfer']
 
     if args.like is not None:
         plot_like(args.path, args.like, args.take, second_path=args.second_path, titles=titles)

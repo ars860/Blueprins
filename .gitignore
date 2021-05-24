@@ -11,3 +11,5 @@ datasets
 diplom.zip
 wandb
 artifacts
+tables
+run_ids

@@ -13,10 +13,14 @@ metric:
 parameters:
   config:
     values:
-      - "03_05/autoencoder/1e-4_50epochs_no_skip.pt"
       - "03_05/autoencoder/1e-4_50epochs_zero_skip.pt"
-      - "freeze__03_05/autoencoder/1e-4_50epochs_no_skip.pt"
       - "freeze__03_05/autoencoder/1e-4_50epochs_zero_skip.pt"
+      - "autoencoder/50epochs_1e-4_gauss_05.pt"
+      - "random_decoder__autoencoder/50epochs_1e-4_gauss_05.pt"
+      - "freeze__autoencoder/50epochs_1e-4_gauss_05.pt"
+      - "random_decoder__freeze__autoencoder/50epochs_1e-4_gauss_05.pt"
+      - "random_decoder__03_05/autoencoder/1e-4_50epochs_zero_skip.pt"
+      - "random_decoder__freeze__03_05/autoencoder/1e-4_50epochs_zero_skip.pt"
     distribution: categorical
   cutout_config:
     values:
@@ -25,21 +29,15 @@ parameters:
       - "0.5_200"
       - "0.5_300"
       - "0.5_400"
-      - "0.75_100"
-      - "0.75_200"
-      - "0.75_300"
-      - "0.75_400"
     distribution: categorical
   vh_:
-    values:
-      - "true"
-      - "false"
-    distribution: categorical
+    value: "true"
+    distribution: constant
   lr:
     values:
-      - 0.0002
       - 0.0003
       - 0.0004
+      - 0.0005
     distribution: categorical
   epochs:
     value: 200
@@ -48,23 +46,17 @@ parameters:
     value: "adam"
     distribution: constant
   loss:
-    values:
-      - "bce"
-      - "bce_dice"
-    distribution: categorical
+    value: "bce_dice"
+    distribution: constant
   dropout:
     values:
-      - 0.1
-      - 0.05
       - 0.025
+      - 0.01
       - 0
     distribution: categorical
   iou_concat:
     value: "true"
     distribution: constant
   hide_aug:
-    values:
-      - 0
-      - 2
-      - 5
-    distribution: categorical
+    value: 5
+    distribution: constant

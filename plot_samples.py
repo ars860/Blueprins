@@ -24,8 +24,9 @@ def plot_sample(model, index, dataloader, samples=None, mode='show', filter=None
         samples = list(itertools.islice((iter(dataloader)), index + 1))
 
     input_img, mask = samples[index]
+    input_img, mask = input_img.to(device), mask.to(device)
 
-    result = model(input_img.to(device)).cpu().detach().numpy().squeeze()
+    result = model(input_img).squeeze()
 
     iou = None
     if calc_iou and filter is None:
@@ -36,12 +37,14 @@ def plot_sample(model, index, dataloader, samples=None, mode='show', filter=None
         result[result < filter] = 0
 
     if calc_iou:
-        iou = iou_multi_channel(result.astype(bool), mask.numpy().squeeze().astype(bool))
+        iou = iou_multi_channel(result, mask)
 
     fig, ax = plt.subplots(12, 2, figsize=[30, 100])
+    input_img = input_img.cpu()
     ax[0][0].imshow(input_img.squeeze())
     # ax2.imshow(mask.squeeze())
-    mask = mask.squeeze()
+    mask = mask.cpu().squeeze()
+    result = result.cpu().detach().numpy()
     for i in range(11):
         if iou is not None:
             ax[i + 1][0].set_title(f'iou: {iou[i]}', fontsize=24)
@@ -56,7 +59,7 @@ def plot_sample(model, index, dataloader, samples=None, mode='show', filter=None
         print(f'saved: {save_path}')
 
 
-def plot_first_n(model, dataloader, n, mode, name_prefix="sample_", device='cpu', calc_iou=True, threshold=None):
+def plot_first_n(model, dataloader, n, mode='show', name_prefix="sample_", device='cpu', calc_iou=True, threshold=None):
     samples = list(itertools.islice((iter(dataloader)), n))
 
     for i in range(n):
