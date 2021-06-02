@@ -180,15 +180,16 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
                 # test_ious[i] = np.mean(iou_multi_channel(processed, mask))
 
         train_losses, test_losses, test_ious = np.mean(train_losses), np.mean(test_losses), iou_global(test_loader, model=model, device=device, concat=iou_c)  # np.mean(test_ious)
+        best_test_iou = max(best_test_iou, test_ious)
 
-        print(train_losses, test_losses, test_ious)
+        print(train_losses, test_losses, test_ious, best_test_iou)
 
         outputs.append([train_losses, test_losses, test_ious])
         if not no_wandb:
             wandb.log({"train_loss": train_losses,
                        "test_loss": test_losses,
                        "test_iou": test_ious,
-                       "best_test_iou": max(test_ious, best_test_iou)})
+                       "best_test_iou": best_test_iou})
         # else:
         # losses_test = np.zeros(len(test_loader))
 
