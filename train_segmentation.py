@@ -374,7 +374,7 @@ if __name__ == '__main__':
     parser.add_argument('--cutout_config', type=str, default=None)
 
     parser.add_argument('--additional_roots', type=str, nargs='+', default=[str(Path() / 'blueprints' / 'new')])
-    parser.add_argument('--additional_roots_channels', type=lambda s: list(map(int, s.split('_'))), default=[2, 3, 4, 5, 6, 9])
+    parser.add_argument('--additional_roots_channels', type=lambda s: None if s == '' else list(map(int, s.split('_'))), default=None)  #, default=[2, 3, 4, 5, 6, 9])
 
     parser.add_argument('--reduce_lr_on_additional', type=int, default=1)
 
