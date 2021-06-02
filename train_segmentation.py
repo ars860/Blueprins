@@ -113,6 +113,7 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
     # length = len(dataloader)
 
     outputs = []
+    best_test_iou = -1
     # test_outputs = []
     for epoch in range(num_epochs):
         train_losses = np.zeros(len(data_loader))
@@ -186,7 +187,8 @@ def train_as_segmantation(model, data_loader, test_loader, mode='train', num_epo
         if not no_wandb:
             wandb.log({"train_loss": train_losses,
                        "test_loss": test_losses,
-                       "test_iou": test_ious})
+                       "test_iou": test_ious,
+                       "best_test_iou": max(test_ious, best_test_iou)})
         # else:
         # losses_test = np.zeros(len(test_loader))
 
